@@ -49,6 +49,12 @@
     width: 200px;
     box-sizing: border-box;
     padding: 12px;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.floating-ui-cleaner:hover {
+  opacity: 1;
 }
 
 .floating-ui-cleaner h3 {
