@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Easy UI cleaner (v3.8 hosted CSS)
+// @name         Easy UI cleaner (v3.16 Facebook block support)
 // @namespace    http://tampermonkey.net/
-// @version      3.8
-// @description  Toggle visibility of UI elements and save preferences
+// @version      3.16
+// @description  Toggle visibility of UI elements and save preferences with precise full path control and multi-toggle per block
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
 // ==/UserScript==
@@ -11,63 +11,47 @@
     'use strict';
 
     const STORAGE_KEY = 'hidden_form_elements';
-    const DEFAULT_HIDDEN = new Set([]); // to be filled manually later
-
-    const TAG_MAP = {
-        APPROOT: 'AR', MAIN: 'M', APPNEWHEADER: 'ANH', DIV: 'D', APPINFRASTRUCTURE: 'AI', APPLOTDETAIL: 'ALD',
-        FORM: 'F', FIELDSET: 'FS', APPINFOGENERALES: 'AIG', BUTTON: 'B', SPAN: 'S', LABEL: 'L', INPUT: 'I',
-        SECTION: 'SEC', ARTICLE: 'ART', NAV: 'NAV', HEADER: 'H', FOOTER: 'FTR', UL: 'UL', LI: 'LI', A: 'A'
-    };
-
-    function compressPath(fullPath) {
-        return fullPath.split(' > ').map(segment => {
-            const match = segment.match(/^([A-Z\-]+)(?=:nth-of-type\((\d+)\))/i);
-            if (!match) return segment;
-            const [_, tag, index] = match;
-            const norm = tag.replace(/-/g, '').toUpperCase();
-            const short = TAG_MAP[norm] || tag[0].toUpperCase();
-            return `${short}not${index}`;
-        }).join('>');
-    }
-
-    function expandPath(compressed) {
-        return compressed.split('>').map(short => {
-            const match = short.match(/([A-Z]+)not(\d+)/);
-            if (!match) return short;
-            const [_, code, idx] = match;
-            const tag = Object.entries(TAG_MAP).find(([_, val]) => val === code)?.[0] || code;
-            return `${tag}:nth-of-type(${idx})`;
-        }).join(' > ');
-    }
+    const DEFAULT_HIDDEN = new Set();
 
     let hiddenInputs = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
-    if (!localStorage.getItem(STORAGE_KEY)) {
-        hiddenInputs = DEFAULT_HIDDEN;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(hiddenInputs)));
-    }
+
+    fetch('https://nexvia-connect.github.io/easy-scripts/cleaner-default.txt')
+        .then(res => res.text())
+        .then(txt => {
+            txt.split('\n').map(x => x.trim()).filter(Boolean).forEach(id => DEFAULT_HIDDEN.add(id));
+            if (!localStorage.getItem(STORAGE_KEY)) {
+                hiddenInputs = DEFAULT_HIDDEN;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(hiddenInputs)));
+                applyHiddenStates();
+            }
+        });
 
     let editMode = false;
     let mutationLock = false;
 
-    function getElementIdentifier(el) {
-        if (el.dataset.cleanerId) return el.dataset.cleanerId;
+    function getFullPath(el) {
         const path = [];
         let current = el;
         while (current && current !== document.body) {
-            let tag = current.tagName;
-            let siblings = Array.from(current.parentNode.children).filter(e => e.tagName === tag);
-            let index = siblings.indexOf(current);
+            const tag = current.tagName;
+            const siblings = Array.from(current.parentNode.children).filter(e => e.tagName === tag);
+            const index = siblings.indexOf(current);
             path.unshift(`${tag}:nth-of-type(${index + 1})`);
             current = current.parentNode;
         }
-        return compressPath(path.join(' > '));
+        return path.join(' > ');
+    }
+
+    function getElementIdentifier(el) {
+        return getFullPath(el);
     }
 
     function getHideableElements() {
         return Array.from(document.querySelectorAll([
-            '.form-group', '.row.mb-3', 'fieldset legend', 'fieldset', '.badges', '.fa-plus', '.fa-compass',
+            '.form-group', '.row.mb-3', 'fieldset', 'legend', '.badges', '.fa-plus', '.fa-compass',
             '.fa-star', '.fa-heart', '.leftpanel-item', '.col > .form-group', '.col .form-group button',
-            '.fiche-footing .btn-left button', '.fiche-footing .btn-right button', '.mat-tab-label'
+            '.fiche-footing .btn-left button', '.fiche-footing .btn-right button', '.mat-tab-label',
+            '.card.col-3' // Facebook block
         ].join(', '))).filter(Boolean);
     }
 
@@ -94,14 +78,25 @@
         getHideableElements().forEach(el => {
             const id = getElementIdentifier(el);
             if (!id) return;
-            el.setAttribute('data-cleaner-id', id);
-            if (el.querySelector('.input-hide-button')) return;
-            el.classList.add('edit-overlay');
 
             const btn = document.createElement('div');
             btn.className = 'input-hide-button';
+            btn.setAttribute('data-id', id);
             btn.textContent = hiddenInputs.has(id) ? '+' : '-';
             if (hiddenInputs.has(id)) btn.classList.add('restore');
+
+            btn.style.position = 'absolute';
+            btn.style.zIndex = 10;
+            if (el.tagName === 'LEGEND') {
+                btn.style.top = '0';
+                btn.style.right = '4px';
+            } else if (el.tagName === 'FIELDSET') {
+                btn.style.top = '0';
+                btn.style.right = '28px';
+            } else {
+                btn.style.top = '4px';
+                btn.style.right = '4px';
+            }
 
             btn.addEventListener('click', e => {
                 e.stopPropagation();
@@ -122,6 +117,8 @@
             btn.addEventListener('mouseenter', () => el.classList.add('hovered'));
             btn.addEventListener('mouseleave', () => el.classList.remove('hovered'));
 
+            el.classList.add('edit-overlay');
+            el.style.position = 'relative';
             el.appendChild(btn);
         });
     }
@@ -194,7 +191,7 @@
     }).observe(document.body, { childList: true, subtree: true });
 
     const style = document.createElement('style');
-    fetch('https://nexvia-connect.github.io/ui-cleaner-style/style.css')
+    fetch('https://nexvia-connect.github.io/easy-scripts/ui-cleaner-style/style.css')
         .then(res => res.text())
         .then(css => style.textContent = css)
         .catch(() => console.warn('CSS failed to load'));
