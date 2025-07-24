@@ -38,8 +38,8 @@
 
 .floating-ui {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 100px !important;
+    right: 100px !important;
     background: #000;
     padding: 0;
     border-radius: 12px;
