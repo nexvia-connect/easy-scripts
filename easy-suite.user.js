@@ -103,7 +103,7 @@
         const helper = document.createElement('div');
         helper.className = 'input-help-icon';
         helper.textContent = 'i';
-        helper.title = helperMap[key];
+        helper.setAttribute('data-help', helperMap[key]);
         wrapper.appendChild(helper);
       }
 
