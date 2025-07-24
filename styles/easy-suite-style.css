@@ -52,3 +52,20 @@
 .easy-suite-collapsed .easy-suite-body {
   display: none;
 }
+
+.input-help-icon {
+  position: absolute;
+  top: 4px;
+  right: 24px;
+  background: #999;
+  color: #eee;
+  font-size: 11px;
+  font-family: sans-serif;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 16px;
+  cursor: default;
+  z-index: 10;
+}
