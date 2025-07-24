@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Suite Loader
 // @namespace    http://tampermonkey.net/
-// @version      2.6
+// @version      2.7
 // @description  Load and control Easy Suite scripts with UI toggle and persistence
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -20,7 +20,8 @@
     { key: 'refInsert', label: 'Ref insert', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-ref-insert.user.js' },
     { key: 'uiCleaner', label: 'UI cleaner', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-ui-cleaner.user.js' },
     { key: 'photoResizer', label: 'Photo resizer', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-photo-resizer.user.js' },
-    { key: 'fullWidth', label: 'Full-width desc', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-full-width-description.user.js' }
+    { key: 'fullWidth', label: 'Full-width desc', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-full-width-description.user.js' },
+    { key: 'listingHelper', label: 'Listing helper', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-listing-creator-helper.user.js' }
   ];
 
   const DEFAULTS = SCRIPT_KEYS.reduce((acc, s) => {
