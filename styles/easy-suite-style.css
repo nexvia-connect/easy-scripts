@@ -61,6 +61,8 @@
 
 .input-help-icon {
   position: absolute;
+  right: 0px;
+  top: 0px;
   background: #666;
   color: #eee;
   font-size: 11px;
