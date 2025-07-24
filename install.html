@@ -18,16 +18,19 @@
       margin-bottom: 24px;
     }
     ol {
-      padding-left: 0;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      list-style: none;
+      counter-reset: step;
+      padding: 0;
+      margin: 0;
     }
     li {
+      counter-increment: step;
       margin-bottom: 24px;
       text-align: center;
-      width: 100%;
+    }
+    li::before {
+      content: counter(step) ". ";
+      font-weight: bold;
     }
     .button {
       display: inline-flex;
