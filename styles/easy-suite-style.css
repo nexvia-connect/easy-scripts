@@ -77,16 +77,16 @@
 .input-help-icon::after {
   content: attr(title);
   position: absolute;
-  top: 22px;
-  right: 0;
+  top: 0;
+  left: 20px;
   background: #333;
   color: #fff;
   padding: 6px 8px;
   border-radius: 4px;
   font-size: 12px;
   white-space: pre-line;
-  width: 280px;
-  max-width: none;
+  max-width: 400px;
+  min-width: 200px;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
   opacity: 0;
   pointer-events: none;
