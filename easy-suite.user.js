@@ -31,12 +31,7 @@
   let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   settings = { ...DEFAULTS, ...settings };
 
-  fetch(HELPER_URL)
-    .then(res => res.json())
-    .then(json => {
-      helperMap = json;
-      createPanel();
-    });
+  let helperMap = {};
 
   function saveSettings() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -101,19 +96,16 @@
       });
 
       const textNode = document.createTextNode(label);
-      const helper = document.createElement('div');
-      helper.className = 'input-help-icon';
-      helper.textContent = 'i';
-
-      if (helperMap[key]) {
-        helper.title = helperMap[key];
-      } else {
-        helper.style.display = 'none';
-      }
-
       wrapper.appendChild(checkbox);
       wrapper.appendChild(textNode);
-      wrapper.appendChild(helper);
+
+      if (helperMap[key]) {
+        const helper = document.createElement('div');
+        helper.className = 'input-help-icon';
+        helper.textContent = 'i';
+        helper.title = helperMap[key];
+        wrapper.appendChild(helper);
+      }
 
       body.appendChild(wrapper);
     });
@@ -173,7 +165,12 @@
 
   function init() {
     loadStyle();
-    createPanel();
+    fetch(HELPER_URL)
+      .then(res => res.json())
+      .then(json => {
+        helperMap = json;
+        createPanel();
+      });
     loadScripts();
   }
 
