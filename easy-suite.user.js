@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Suite Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  Loads all Easy scripts in one with UI controls
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
