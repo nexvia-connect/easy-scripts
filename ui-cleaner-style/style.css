@@ -83,6 +83,7 @@
     border-radius: 8px;
     z-index: 10000;
     width: 500px;
+    gap: 6px;
     padding: 20px;
     font-family: 'Open Sans', sans-serif;
 }
