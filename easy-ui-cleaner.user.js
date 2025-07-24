@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Easy UI cleaner (v3.16 Facebook block support)
+// @name         Easy UI cleaner (v3.17 Top-right, titled)
 // @namespace    http://tampermonkey.net/
-// @version      3.16
+// @version      3.17
 // @description  Toggle visibility of UI elements and save preferences with precise full path control and multi-toggle per block
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -170,6 +170,7 @@
     const ui = document.createElement('div');
     ui.className = 'floating-ui-cleaner';
     ui.innerHTML = `
+        <h3>UI cleaner</h3>
         <button id="toggle-edit">Show/Hide elements</button>
         <button id="edit-hidden" style="display:none">View hidden code</button>
     `;
