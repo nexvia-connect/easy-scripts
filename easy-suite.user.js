@@ -7,8 +7,6 @@
 // @grant        none
 // @connect      raw.githubusercontent.com
 // ==/UserScript==
-
-
 (function () {
   'use strict';
 
@@ -195,6 +193,3 @@
     document.addEventListener('DOMContentLoaded', init);
   }
 })();
-
-
-ChatGPT can make mistakes. Check important info.
