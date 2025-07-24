@@ -31,10 +31,12 @@
   let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   settings = { ...DEFAULTS, ...settings };
 
-  let helperMap = {};
   fetch(HELPER_URL)
     .then(res => res.json())
-    .then(json => helperMap = json);
+    .then(json => {
+      helperMap = json;
+      createPanel();
+    });
 
   function saveSettings() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
