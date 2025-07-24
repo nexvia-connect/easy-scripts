@@ -62,7 +62,7 @@
         cursor: pointer;
       }
       .floating-ui h3 img {
-        height: 18px;
+        height: 10px;
       }
       .floating-ui label {
         display: flex;
