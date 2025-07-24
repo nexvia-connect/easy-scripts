@@ -1,17 +1,20 @@
 // ==UserScript==
 // @name         Easy Suite Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.3
-// @description  Loads all Easy scripts in one with UI controls
+// @version      2.0
+// @description  Loads all Easy scripts in one, with UI toggle control
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
+// @require      https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-ref-insert.user.js
+// @require      https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-ui-cleaner.user.js
+// @require      https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-photo-resizer.user.js
+// @require      https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-full-width-description.user.js
 // ==/UserScript==
 
 (function () {
   'use strict';
 
   const SETTINGS_KEY = 'easy_suite_enabled_scripts';
-  const POSITION_KEY = 'easy_suite_ui_position';
   const SCRIPT_KEYS = [
     { key: 'refInsert', label: 'Ref insert' },
     { key: 'uiCleaner', label: 'UI cleaner' },
@@ -27,8 +30,6 @@
   let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   settings = { ...DEFAULTS, ...settings };
 
-  const position = JSON.parse(localStorage.getItem(POSITION_KEY) || '{}');
-
   function saveSettings() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     location.reload();
@@ -39,16 +40,15 @@
     style.textContent = `
       .floating-ui {
         position: fixed;
-        top: ${position.top || '20px'};
-        left: ${position.left || '20px'};
+        top: 20px;
+        left: 20px;
         background: #000;
         padding: 12px;
         border-radius: 12px;
         border: 1px solid #555;
         font-family: 'Open Sans', sans-serif;
         z-index: 9999;
-        width: 200px;
-        cursor: move;
+        width: 220px;
       }
       .floating-ui h3 {
         margin: 0 0 6px 0;
@@ -58,11 +58,11 @@
         padding-bottom: 4px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 6px;
+        cursor: pointer;
       }
       .floating-ui h3 img {
-        height: 16px;
-        margin-right: 6px;
+        height: 18px;
       }
       .floating-ui label {
         display: flex;
@@ -89,44 +89,29 @@
       .floating-ui button:hover {
         background: #333;
       }
-      .easy-suite-toggle {
-        cursor: pointer;
-        color: #ccc;
-        font-size: 12px;
-      }
     `;
     document.head.appendChild(style);
 
     const panel = document.createElement('div');
     panel.className = 'floating-ui';
-    document.body.appendChild(panel);
+    panel.setAttribute('draggable', 'true');
 
     const title = document.createElement('h3');
-    const titleLeft = document.createElement('span');
-    const logo = document.createElement('img');
-    logo.src = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-suite.png';
-    logo.alt = 'Icon';
-
-    const titleText = document.createTextNode('Easy-Suite');
-    titleLeft.appendChild(logo);
-    titleLeft.appendChild(titleText);
-    title.appendChild(titleLeft);
-
-    const toggle = document.createElement('span');
-    toggle.textContent = '▼';
-    toggle.className = 'easy-suite-toggle';
-    title.appendChild(toggle);
+    const icon = document.createElement('img');
+    icon.src = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-suite.png';
+    icon.alt = 'Logo';
+    title.appendChild(icon);
+    title.appendChild(document.createTextNode('Easy-Suite'));
     panel.appendChild(title);
 
     const optionsContainer = document.createElement('div');
-
     SCRIPT_KEYS.forEach(({ key, label }) => {
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = settings[key];
       checkbox.addEventListener('change', () => {
         settings[key] = checkbox.checked;
-        saveSettings(); // triggers location.reload()
+        saveSettings();
       });
 
       const wrapper = document.createElement('label');
@@ -134,76 +119,40 @@
       wrapper.appendChild(document.createTextNode(label));
       optionsContainer.appendChild(wrapper);
     });
+    panel.appendChild(optionsContainer);
 
     const forceUpdateBtn = document.createElement('button');
     forceUpdateBtn.textContent = 'Force update';
     forceUpdateBtn.addEventListener('click', () => {
       window.open('https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-suite.user.js', '_blank');
     });
-    optionsContainer.appendChild(forceUpdateBtn);
-    panel.appendChild(optionsContainer);
+    panel.appendChild(forceUpdateBtn);
 
-    toggle.addEventListener('click', () => {
-      const collapsed = optionsContainer.style.display === 'none';
-      optionsContainer.style.display = collapsed ? 'block' : 'none';
-      toggle.textContent = collapsed ? '▼' : '▲';
+    // Collapse/expand
+    title.addEventListener('click', () => {
+      optionsContainer.style.display = optionsContainer.style.display === 'none' ? 'block' : 'none';
     });
 
-    // Drag logic
-    let isDragging = false;
-    let startX, startY;
-
-    panel.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      startX = e.clientX - panel.offsetLeft;
-      startY = e.clientY - panel.offsetTop;
-      e.preventDefault();
+    // Dragging logic
+    let offsetX = 0, offsetY = 0;
+    panel.addEventListener('dragstart', e => {
+      offsetX = e.offsetX;
+      offsetY = e.offsetY;
+    });
+    panel.addEventListener('dragend', e => {
+      panel.style.left = (e.pageX - offsetX) + 'px';
+      panel.style.top = (e.pageY - offsetY) + 'px';
+      localStorage.setItem('easy_suite_ui_position', JSON.stringify({ x: e.pageX - offsetX, y: e.pageY - offsetY }));
     });
 
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const left = `${e.clientX - startX}px`;
-      const top = `${e.clientY - startY}px`;
-      panel.style.left = left;
-      panel.style.top = top;
-    });
+    // Restore position
+    const savedPos = JSON.parse(localStorage.getItem('easy_suite_ui_position') || '{}');
+    if (savedPos.x && savedPos.y) {
+      panel.style.left = savedPos.x + 'px';
+      panel.style.top = savedPos.y + 'px';
+    }
 
-    document.addEventListener('mouseup', () => {
-      if (!isDragging) return;
-      isDragging = false;
-      localStorage.setItem(POSITION_KEY, JSON.stringify({
-        top: panel.style.top,
-        left: panel.style.left
-      }));
-    });
-  }
-
-  function shouldRun(key) {
-    return settings[key];
-  }
-
-  if (shouldRun('refInsert')) {
-    const s = document.createElement('script');
-    s.src = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-ref-insert.user.js';
-    document.body.appendChild(s);
-  }
-
-  if (shouldRun('uiCleaner')) {
-    const s = document.createElement('script');
-    s.src = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-ui-cleaner.user.js';
-    document.body.appendChild(s);
-  }
-
-  if (shouldRun('photoResizer')) {
-    const s = document.createElement('script');
-    s.src = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-photo-resizer.user.js';
-    document.body.appendChild(s);
-  }
-
-  if (shouldRun('fullWidth')) {
-    const s = document.createElement('script');
-    s.src = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-full-width-description.user.js';
-    document.body.appendChild(s);
+    document.body.appendChild(panel);
   }
 
   createPanel();
