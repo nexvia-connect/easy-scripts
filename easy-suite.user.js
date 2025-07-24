@@ -131,7 +131,6 @@
           cleaner.style.left = suite.style.left;
           cleaner.style.top = `${suite.getBoundingClientRect().top + suite.offsetHeight + 5}px`;
           cleaner.style.zIndex = '9998';
-          cleaner.style.opacity = '1';
         } else {
           setTimeout(tryAttachCleaner, 200);
         }
