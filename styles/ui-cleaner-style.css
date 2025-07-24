@@ -51,15 +51,15 @@
 }
 
 .floating-ui h3 {
-    margin: 0;
-    padding: 8px 12px;
-    color: white;
-    font-size: 14px;
-    border-bottom: 1px solid #444;
-    cursor: default;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  margin: 0 0 6px 0;
+  color: white;
+  font-size: 14px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 4px;
+  cursor: move;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .floating-ui .easy-suite-body {
