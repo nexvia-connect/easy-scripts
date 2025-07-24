@@ -77,7 +77,7 @@
 }
 
 .input-help-icon::after {
-  content: attr(title);
+  content: attr(data-help);
   position: absolute;
   top: 0;
   left: 20px;
