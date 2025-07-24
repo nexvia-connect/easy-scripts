@@ -27,7 +27,6 @@
 .floating-ui label {
   display: flex;
   align-items: center;
-  margin-top: 8px;
   color: #fff;
   font-size: 12px;
 }
