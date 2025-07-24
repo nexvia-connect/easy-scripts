@@ -18,25 +18,23 @@
       margin-bottom: 24px;
     }
     ol {
-      display: inline-block;
-      text-align: left;
-      padding-left: 20px;
+      padding-left: 0;
       margin: 0 auto;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 8px 0 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     li {
-      margin-bottom: 16px;
+      margin-bottom: 24px;
+      text-align: center;
+      width: 100%;
     }
     .button {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       padding: 10px 16px;
-      margin: 12px 0;
+      margin: 6px;
       background: white;
       color: black;
       text-decoration: none;
@@ -53,33 +51,37 @@
       background: black;
       color: white;
     }
+    .button-group {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>Install Easy-Suite for Nexvia</h1>
   <ol>
-    <li>Install Tampermonkey extension:
-      <ul>
-        <li>
-          <a href="https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" class="button">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/Google_Chrome_icon_%282011%29.png" alt="Chrome Icon">Chrome
-          </a>
-        </li>
-        <li>
-          <a href="https://addons.mozilla.org/firefox/addon/tampermonkey/" target="_blank" class="button">
-            <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Flogodownload.org%2Fwp-content%2Fuploads%2F2019%2F11%2Ffirefox-logo-1.png&f=1&nofb=1&ipt=18f98982728013dd3544fc7063d6067f6f18777d750949ab6aa6324d330e767b" alt="Firefox Icon">Firefox
-          </a>
-        </li>
-      </ul>
+    <li>
+      Install Tampermonkey extension:
+      <div class="button-group">
+        <a href="https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" class="button">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/Google_Chrome_icon_%282011%29.png" alt="Chrome Icon">Chrome
+        </a>
+        <a href="https://addons.mozilla.org/firefox/addon/tampermonkey/" target="_blank" class="button">
+          <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Flogodownload.org%2Fwp-content%2Fuploads%2F2019%2F11%2Ffirefox-logo-1.png&f=1&nofb=1&ipt=18f98982728013dd3544fc7063d6067f6f18777d750949ab6aa6324d330e767b" alt="Firefox Icon">Firefox
+        </a>
+      </div>
     </li>
-    <li>Once installed, click below to install the Easy-Suite:</li>
-  </ol>
-
-  <a href="https://gist.github.com/nexvia-connect/4ae10e453ee3b6018417f7815a1bfe4b/raw/010e5e61cff2ba2ef5b01ed155375dab95b3beea/easy-suite.user.js" target="_blank" class="button">
-    Install Easy-Suite
-  </a>
-
-  <ol start="3">
+    <li>
+      Once installed, click below to install the Easy-Suite:
+      <div>
+        <a href="https://gist.github.com/nexvia-connect/4ae10e453ee3b6018417f7815a1bfe4b/raw/010e5e61cff2ba2ef5b01ed155375dab95b3beea/easy-suite.user.js" target="_blank" class="button">
+          Install Easy-Suite
+        </a>
+      </div>
+    </li>
     <li>Then just refresh <strong>https://nexvia1832.easy-serveur53.com/</strong>.</li>
   </ol>
 </body>
