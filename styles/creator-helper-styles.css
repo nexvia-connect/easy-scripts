@@ -99,3 +99,60 @@
   cursor: pointer;
   color: #6078BF;
 }
+
+.elch-wrapper {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 400px;
+  transition: all 0.3s ease;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.elch-wrapper .elch-collapsed-bar {
+  background: #222;
+  color: #fff;
+  text-align: center;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #555;
+  border-radius: 3px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.elch-wrapper.expanded .elch-sections {
+  max-height: 70vh;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.elch-sections {
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  max-height: 0;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.elch-download {
+  display: block;
+  width: 100%;
+  background: #222;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  font-family: 'Open Sans', sans-serif;
+}
+
