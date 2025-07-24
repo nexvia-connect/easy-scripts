@@ -184,7 +184,11 @@
     fetch(HELPER_URL)
       .then(res => res.json())
       .then(json => {
-        helperMap = json;
+        helperMap = typeof json === 'object' && json !== null ? json : {};
+        createPanel();
+      })
+      .catch(() => {
+        helperMap = {};
         createPanel();
       });
     loadScripts();
