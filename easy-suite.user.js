@@ -8,6 +8,7 @@
 // @connect      raw.githubusercontent.com
 // ==/UserScript==
 
+
 (function () {
   'use strict';
 
@@ -64,6 +65,7 @@
     panel.className = 'floating-ui';
     panel.style.left = `${pos.left}px`;
     panel.style.top = `${pos.top}px`;
+    panel.style.position = 'fixed';
 
     const header = document.createElement('h3');
     const titleSpan = document.createElement('span');
@@ -118,14 +120,27 @@
     body.appendChild(forceUpdateBtn);
 
     panel.appendChild(body);
+    document.body.appendChild(panel);
+
+    // Move cleaner if loaded
+    if (settings['uiCleaner']) {
+      const interval = setInterval(() => {
+        const cleaner = document.querySelector('.floating-ui-cleaner');
+        if (cleaner) {
+          cleaner.style.position = 'static';
+          cleaner.style.marginTop = '10px';
+          cleaner.style.opacity = '1';
+          panel.appendChild(cleaner);
+          clearInterval(interval);
+        }
+      }, 200);
+    }
 
     let collapsed = false;
     header.addEventListener('dblclick', () => {
       collapsed = !collapsed;
       panel.classList.toggle('easy-suite-collapsed', collapsed);
     });
-
-    document.body.appendChild(panel);
 
     let isDragging = false;
     let offsetX = 0, offsetY = 0;
@@ -180,3 +195,6 @@
     document.addEventListener('DOMContentLoaded', init);
   }
 })();
+
+
+ChatGPT can make mistakes. Check important info.
