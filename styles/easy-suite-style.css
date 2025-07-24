@@ -69,3 +69,26 @@
   cursor: default;
   z-index: 10;
 }
+
+.input-help-icon::after {
+  content: attr(title);
+  position: absolute;
+  top: 20px;
+  right: 0;
+  background: #333;
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: pre-line;
+  max-width: 240px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.input-help-icon:hover::after {
+  opacity: 1;
+  pointer-events: auto;
+}
