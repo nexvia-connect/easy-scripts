@@ -36,7 +36,7 @@
     opacity: 0.5 !important;
 }
 
-.floating-ui {
+.floating-ui-cleaner {
     position: fixed;
     background: #000;
     padding: 0;
@@ -49,7 +49,7 @@
     padding: 5px;
 }
 
-.floating-ui h3 {
+.floating-ui-cleaner h3 {
   margin: 0 0 6px 0;
   color: white;
   font-size: 14px;
@@ -61,14 +61,14 @@
   justify-content: space-between;
 }
 
-.floating-ui .easy-suite-body {
+.floating-ui-cleaner .easy-suite-body {
     display: flex;
     flex-direction: column;
     padding: 8px 12px;
     gap: 6px;
 }
 
-.floating-ui button,
+.floating-ui-cleaner button,
 .popup-editor button {
     background: #222;
     color: white;
@@ -84,7 +84,7 @@
     margin: 2px 0px;
 }
 
-.floating-ui button:hover,
+.floating-ui-cleaner button:hover,
 .popup-editor button:hover {
     background: #333;
 }
