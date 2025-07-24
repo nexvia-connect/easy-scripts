@@ -191,7 +191,7 @@
     }).observe(document.body, { childList: true, subtree: true });
 
     const style = document.createElement('style');
-    fetch('https://nexvia-connect.github.io/easy-scripts/ui-cleaner-style/style.css')
+    fetch('https://nexvia-connect.github.io/easy-scripts/styles/ui-cleaner-style.css')
         .then(res => res.text())
         .then(css => style.textContent = css)
         .catch(() => console.warn('CSS failed to load'));
