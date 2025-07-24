@@ -38,8 +38,8 @@
 
 .floating-ui {
     position: fixed;
-    top: 100px !important;
-    right: 100px !important;
+    top: 200px !important;
+    right: 50px !important;
     background: #000;
     padding: 0;
     border-radius: 12px;
@@ -48,6 +48,7 @@
     z-index: 9999;
     width: 200px;
     box-sizing: border-box;
+    padding: 5px;
 }
 
 .floating-ui h3 {
