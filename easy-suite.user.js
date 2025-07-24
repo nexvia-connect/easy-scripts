@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Suite Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  Loads all Easy scripts in one with UI controls
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -126,7 +126,7 @@
       checkbox.checked = settings[key];
       checkbox.addEventListener('change', () => {
         settings[key] = checkbox.checked;
-        saveSettings();
+        saveSettings(); // triggers location.reload()
       });
 
       const wrapper = document.createElement('label');
