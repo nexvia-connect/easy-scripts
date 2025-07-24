@@ -18,43 +18,40 @@
       margin-bottom: 24px;
     }
     ol {
+      display: inline-block;
       text-align: left;
       padding-left: 20px;
+      margin: 0 auto;
     }
     ul {
       list-style: none;
-      padding-left: 0;
-      margin-top: 8px;
+      padding: 0;
+      margin: 8px 0 0 0;
     }
     li {
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
-    a.button, button {
-      display: inline-block;
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       padding: 10px 16px;
       margin: 12px 0;
       background: white;
       color: black;
       text-decoration: none;
-      border: 2px solid black;
+      border: 1px solid black;
       border-radius: 5px;
       font-weight: bold;
       transition: background 0.3s, color 0.3s;
     }
-    a.button:hover, button:hover {
-      background: black;
-      color: white;
-    }
-    .icon-link {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      justify-content: center;
-      margin-top: 6px;
-    }
-    .icon-link img {
+    .button img {
       height: 20px;
       width: 20px;
+    }
+    .button:hover {
+      background: black;
+      color: white;
     }
   </style>
 </head>
@@ -63,20 +60,24 @@
   <ol>
     <li>Install Tampermonkey extension:
       <ul>
-        <li class="icon-link">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/Google_Chrome_icon_%282011%29.png" alt="Chrome Icon">
-          <a href="https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" class="button">Chrome</a>
+        <li>
+          <a href="https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" class="button">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/Google_Chrome_icon_%282011%29.png" alt="Chrome Icon">Chrome
+          </a>
         </li>
-        <li class="icon-link">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Mozilla_Firefox_3.5_logo_256.png" alt="Firefox Icon">
-          <a href="https://addons.mozilla.org/firefox/addon/tampermonkey/" target="_blank" class="button">Firefox</a>
+        <li>
+          <a href="https://addons.mozilla.org/firefox/addon/tampermonkey/" target="_blank" class="button">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Firefox_logo%2C_2019.svg" alt="Firefox Icon">Firefox
+          </a>
         </li>
       </ul>
     </li>
     <li>Once installed, click below to install the Easy-Suite:</li>
   </ol>
 
-  <a href="https://gist.github.com/nexvia-connect/4ae10e453ee3b6018417f7815a1bfe4b/raw/010e5e61cff2ba2ef5b01ed155375dab95b3beea/easy-suite.user.js" target="_blank" class="button">Install Easy-Suite</a>
+  <a href="https://gist.github.com/nexvia-connect/4ae10e453ee3b6018417f7815a1bfe4b/raw/010e5e61cff2ba2ef5b01ed155375dab95b3beea/easy-suite.user.js" target="_blank" class="button">
+    Install Easy-Suite
+  </a>
 
   <ol start="3">
     <li>Then just refresh <strong>https://nexvia1832.easy-serveur53.com/</strong>.</li>
