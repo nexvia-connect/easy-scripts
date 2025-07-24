@@ -168,7 +168,7 @@
     }
 
     const ui = document.createElement('div');
-    ui.className = 'floating-ui';
+    ui.className = 'floating-ui-cleaner';
     ui.innerHTML = `
         <button id="toggle-edit">Show/Hide elements</button>
         <button id="edit-hidden" style="display:none">View hidden code</button>
