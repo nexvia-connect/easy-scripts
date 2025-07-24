@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Easy Suite Loader
 // @namespace    http://tampermonkey.net/
-// @version      2.4
+// @version      2.6
 // @description  Load and control Easy Suite scripts with UI toggle and persistence
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
 // @connect      raw.githubusercontent.com
 // ==/UserScript==
+
 (function () {
   'use strict';
 
@@ -59,11 +60,12 @@
 
   function createPanel() {
     const pos = loadPosition();
-    const panel = document.createElement('div');
-    panel.className = 'floating-ui';
-    panel.style.left = `${pos.left}px`;
-    panel.style.top = `${pos.top}px`;
-    panel.style.position = 'fixed';
+
+    const suite = document.createElement('div');
+    suite.className = 'floating-ui';
+    suite.style.left = `${pos.left}px`;
+    suite.style.top = `${pos.top}px`;
+    suite.style.position = 'fixed';
 
     const header = document.createElement('h3');
     const titleSpan = document.createElement('span');
@@ -75,7 +77,7 @@
     icon.style.verticalAlign = 'middle';
     header.appendChild(titleSpan);
     header.appendChild(icon);
-    panel.appendChild(header);
+    suite.appendChild(header);
 
     const body = document.createElement('div');
     body.className = 'easy-suite-body';
@@ -117,36 +119,33 @@
     });
     body.appendChild(forceUpdateBtn);
 
-    panel.appendChild(body);
-    document.body.appendChild(panel);
+    suite.appendChild(body);
+    document.body.appendChild(suite);
 
-    // Move cleaner if loaded
+    let cleaner = null;
     if (settings['uiCleaner']) {
-      const interval = setInterval(() => {
-        const cleaner = document.querySelector('.floating-ui-cleaner');
+      const tryAttachCleaner = () => {
+        cleaner = document.querySelector('.floating-ui-cleaner');
         if (cleaner) {
-          cleaner.style.position = 'static';
-          cleaner.style.marginTop = '10px';
+          cleaner.style.position = 'fixed';
+          cleaner.style.left = suite.style.left;
+          cleaner.style.top = `${suite.getBoundingClientRect().top + suite.offsetHeight + 5}px`;
+          cleaner.style.zIndex = '9998';
           cleaner.style.opacity = '1';
-          panel.appendChild(cleaner);
-          clearInterval(interval);
+        } else {
+          setTimeout(tryAttachCleaner, 200);
         }
-      }, 200);
+      };
+      tryAttachCleaner();
     }
-
-    let collapsed = false;
-    header.addEventListener('dblclick', () => {
-      collapsed = !collapsed;
-      panel.classList.toggle('easy-suite-collapsed', collapsed);
-    });
 
     let isDragging = false;
     let offsetX = 0, offsetY = 0;
 
     header.addEventListener('mousedown', (e) => {
       isDragging = true;
-      offsetX = e.clientX - panel.getBoundingClientRect().left;
-      offsetY = e.clientY - panel.getBoundingClientRect().top;
+      offsetX = e.clientX - suite.getBoundingClientRect().left;
+      offsetY = e.clientY - suite.getBoundingClientRect().top;
       e.preventDefault();
     });
 
@@ -154,13 +153,17 @@
       if (!isDragging) return;
       const newX = e.clientX - offsetX;
       const newY = e.clientY - offsetY;
-      panel.style.left = `${newX}px`;
-      panel.style.top = `${newY}px`;
+      suite.style.left = `${newX}px`;
+      suite.style.top = `${newY}px`;
+      if (cleaner) {
+        cleaner.style.left = `${newX}px`;
+        cleaner.style.top = `${newY + suite.offsetHeight + 5}px`;
+      }
     });
 
     document.addEventListener('mouseup', () => {
       if (isDragging) {
-        savePosition(parseInt(panel.style.left), parseInt(panel.style.top));
+        savePosition(parseInt(suite.style.left), parseInt(suite.style.top));
         isDragging = false;
       }
     });
