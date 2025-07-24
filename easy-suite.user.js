@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Suite Loader
 // @namespace    http://tampermonkey.net/
-// @version      2.3
+// @version      2.4
 // @description  Load and control Easy Suite scripts with UI toggle and persistence
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -14,6 +14,7 @@
   const SETTINGS_KEY = 'easy_suite_enabled_scripts';
   const POSITION_KEY = 'easy_suite_ui_position';
   const STYLE_URL = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/styles/easy-suite-style.css';
+  const HELPER_URL = 'https://nexvia-connect.github.io/easy-scripts/helper.json';
 
   const SCRIPT_KEYS = [
     { key: 'refInsert', label: 'Ref insert', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-ref-insert.user.js' },
@@ -29,6 +30,11 @@
 
   let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   settings = { ...DEFAULTS, ...settings };
+
+  let helperMap = {};
+  fetch(HELPER_URL)
+    .then(res => res.json())
+    .then(json => helperMap = json);
 
   function saveSettings() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -78,6 +84,12 @@
     body.className = 'easy-suite-body';
 
     SCRIPT_KEYS.forEach(({ key, label }) => {
+      const wrapper = document.createElement('label');
+      wrapper.style.position = 'relative';
+      wrapper.style.display = 'flex';
+      wrapper.style.alignItems = 'center';
+      wrapper.style.gap = '8px';
+
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = settings[key];
@@ -85,9 +97,22 @@
         settings[key] = checkbox.checked;
         saveSettings();
       });
-      const wrapper = document.createElement('label');
+
+      const textNode = document.createTextNode(label);
+      const helper = document.createElement('div');
+      helper.className = 'input-help-icon';
+      helper.textContent = 'i';
+
+      if (helperMap[key]) {
+        helper.title = helperMap[key];
+      } else {
+        helper.style.display = 'none';
+      }
+
       wrapper.appendChild(checkbox);
-      wrapper.appendChild(document.createTextNode(label));
+      wrapper.appendChild(textNode);
+      wrapper.appendChild(helper);
+
       body.appendChild(wrapper);
     });
 
@@ -108,7 +133,6 @@
 
     document.body.appendChild(panel);
 
-    // Dragging
     let isDragging = false;
     let offsetX = 0, offsetY = 0;
 
