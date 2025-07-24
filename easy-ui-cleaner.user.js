@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Easy UI cleaner
+// @name         Easy UI cleaner (v3.8 hosted CSS)
 // @namespace    http://tampermonkey.net/
-// @version      3.6
+// @version      3.8
 // @description  Toggle visibility of UI elements and save preferences
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -11,31 +11,34 @@
     'use strict';
 
     const STORAGE_KEY = 'hidden_form_elements';
+    const DEFAULT_HIDDEN = new Set([]); // to be filled manually later
 
-    const DEFAULT_HIDDEN = new Set([
-        "prix_estimé", "prix_m2", "commission_hors_taxe", "commission", "commission_pourcentage",
-        "numero_acte", "surface_totale", "surface_cumulable", "surface_divisible", "titre", "main_url",
-        "court_terme", "orientation", "vue", "tpd_id", "nb_pieces", "nb_sdd", "numero", "colocation_acceptee",
-        "raison_clause_suspensive", "disponibilite", "duree_min_bail", "origine_entree", "btm_ref",
-        "roles_id_commercial_tertiaire", "agence_bureaux_id", "roles_id_commercial_secondaire", "achat_type",
-        "Commercial 2", "Bureau", "Commercial 3", "Projet / Résidence", "Commercial 3 - Sélectionnez - Agostini Mattia  Akpinar Süleyman  Aubrée Romain  Bertrandias Xavier",
-        "Bureau - Sélectionnez -NEXVIA", "Date entrée", "Origine d'entrée", "Date clause exclusive",
-        "Disponibilité", "Raison clause exclusive", "Colocation acceptée", "Durée min. bail", "mois", "N° lot",
-        "Salles de douche", "Orientation", "Vue", "Dalle", "Caractéristiques", "En vente", "Titre",
-        "URL principale", "Court terme", "Commercial 2 - Sélectionnez - Agostini Mattia  Akpinar Süleyman  Aubrée Romain  Bertrandias Xavier",
-        "Prix m²", "Honoraires (TTC %)", "Honoraires (HT)", "Honoraires (TTC)", "Honoraires à la charge de",
-        "Honoraires vendeur %", "Numéro acte", "Date signature", "Totale", "m²", "Surface cumulable",
-        "Surface divisible", "Complément d'adresse", "Publicité", "Remarques", "Police", "Bourse",
-        "Réseaux sociaux", "Parking collectif", "Référence boîtier", "Antenne satellite", "Autre", "Libellé",
-        "Description", "Documents", "0", "Avis d'échéances", "Baux", "CRG", "Contrats d'entretiens", "Courriers",
-        "Divers", "Etats des l", "Rapprochements", "Propriétaire", "Locataire", "Suivi",
-        "Origine d'entrée - Sélectionnez -", "Honoraires à la charge de VendeurAcquéreurAcquéreur & vendeur",
-        "Durée min. bail  mois", "Colocation acceptée - Sélectionnez -OuiNon", "Action", "Passation",
-        "Impression", "Copier", "Archiver", "Supprimer", "Dépublier", "Finances", "Prix de vente *",
-        "Prix estimé", "Charges mensuelles", "Date de fin de validité", "Date du prochain diagnostic",
-        "CO2", "A+", "A", "B", "C", "D", "E", "F", "G", "H", "I", "Date du diagnostic", "Desc", "PDL", "PCE",
-        "Eau", "Collective", "Individuelle gaz", "Individuelle électrique"
-    ]);
+    const TAG_MAP = {
+        APPROOT: 'AR', MAIN: 'M', APPNEWHEADER: 'ANH', DIV: 'D', APPINFRASTRUCTURE: 'AI', APPLOTDETAIL: 'ALD',
+        FORM: 'F', FIELDSET: 'FS', APPINFOGENERALES: 'AIG', BUTTON: 'B', SPAN: 'S', LABEL: 'L', INPUT: 'I',
+        SECTION: 'SEC', ARTICLE: 'ART', NAV: 'NAV', HEADER: 'H', FOOTER: 'FTR', UL: 'UL', LI: 'LI', A: 'A'
+    };
+
+    function compressPath(fullPath) {
+        return fullPath.split(' > ').map(segment => {
+            const match = segment.match(/^([A-Z\-]+)(?=:nth-of-type\((\d+)\))/i);
+            if (!match) return segment;
+            const [_, tag, index] = match;
+            const norm = tag.replace(/-/g, '').toUpperCase();
+            const short = TAG_MAP[norm] || tag[0].toUpperCase();
+            return `${short}not${index}`;
+        }).join('>');
+    }
+
+    function expandPath(compressed) {
+        return compressed.split('>').map(short => {
+            const match = short.match(/([A-Z]+)not(\d+)/);
+            if (!match) return short;
+            const [_, code, idx] = match;
+            const tag = Object.entries(TAG_MAP).find(([_, val]) => val === code)?.[0] || code;
+            return `${tag}:nth-of-type(${idx})`;
+        }).join(' > ');
+    }
 
     let hiddenInputs = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
     if (!localStorage.getItem(STORAGE_KEY)) {
@@ -44,122 +47,7 @@
     }
 
     let editMode = false;
-    let cleanEnabled = true;
     let mutationLock = false;
-
-    const style = document.createElement('style');
-    style.textContent = `
-    .input-hide-button {
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        background: #FC3366;
-        color: white;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
-        font-size: 12px;
-        text-align: center;
-        line-height: 18px;
-        cursor: pointer;
-        font-family: 'Open Sans', sans-serif;
-        border: none;
-        z-index: 2;
-    }
-    .input-hide-button.restore {
-        background: #6078BF;
-    }
-    .edit-overlay {
-        position: relative;
-    }
-    .edit-overlay.hovered::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.1);
-        pointer-events: none;
-        z-index: 0;
-    }
-    .dimmed-input {
-        opacity: 0.5 !important;
-    }
-    .floating-ui {
-        position: fixed;
-        top: 100px;
-        right: 20px;
-        background: #000;
-        padding: 8px;
-        border-radius: 8px;
-        border: 1px solid #555;
-        font-family: 'Open Sans', sans-serif;
-        z-index: 9999;
-        width: 180px;
-    }
-    .floating-ui button,
-    .popup-editor button {
-        display: block;
-        width: 100%;
-        background: #222;
-        color: #fff;
-        border: 1px solid #555;
-        padding: 4px 10px;
-        border-radius: 3px;
-        font-size: 12px;
-        cursor: pointer;
-        text-align: center;
-        font-family: 'Open Sans', sans-serif;
-        margin: 3px 0px;
-    }
-    .floating-ui button:hover,
-    .popup-editor button:hover {
-        background: #333;
-    }
-    .floating-ui label {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-top: 8px;
-        color: #fff;
-        font-size: 12px;
-    }
-    .popup-editor {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #000;
-        border: 1px solid #555;
-        border-radius: 8px;
-        z-index: 10000;
-        width: 500px;
-        padding: 20px;
-        font-family: 'Open Sans', sans-serif;
-    }
-    .popup-editor textarea {
-        width: 100%;
-        height: 300px;
-        font-family: monospace;
-        font-size: 12px;
-        background: #111;
-        color: #eee;
-        border: 1px solid #444;
-        margin-bottom: 12px;
-    }
-    `;
-    document.head.appendChild(style);
-
-    const ui = document.createElement('div');
-    ui.className = 'floating-ui';
-    ui.innerHTML = `
-        <button id="toggle-edit">Show/Hide elements</button>
-        <button id="edit-hidden" style="display:none">View hidden code</button>
-        <button id="reset-default" style="display:none">Set default hidden state</button>
-        <label><input type="checkbox" id="toggle-clean" checked> Clean Easy</label>
-    `;
-    document.body.appendChild(ui);
 
     function getElementIdentifier(el) {
         if (el.dataset.cleanerId) return el.dataset.cleanerId;
@@ -172,38 +60,15 @@
             path.unshift(`${tag}:nth-of-type(${index + 1})`);
             current = current.parentNode;
         }
-        return path.join(' > ');
+        return compressPath(path.join(' > '));
     }
 
     function getHideableElements() {
-        const selectors = [
-            '.form-group',
-            '.row.mb-3',
-            'fieldset legend',
-            'fieldset',
-            '.badges',
-            '.fa-plus',
-            '.fa-compass',
-            '.fa-star',
-            '.fa-heart',
-            '.leftpanel-item',
-            '.col > .form-group',
-            '.col .form-group button',
-            '.fiche-footing .btn-left button',
-            '.fiche-footing .btn-right button',
-            '.mat-tab-label'
-        ];
-
-        const baseElems = Array.from(document.querySelectorAll(selectors.join(', ')));
-
-        document.querySelectorAll('.col .form-group button').forEach(btn => {
-            const parent = btn.closest('.col');
-            if (parent && parent.innerHTML.includes('data-target="#modalAdminTypeEtat"')) {
-                parent.style.display = cleanEnabled ? 'none' : '';
-            }
-        });
-
-        return Array.from(new Set(baseElems.filter(Boolean)));
+        return Array.from(document.querySelectorAll([
+            '.form-group', '.row.mb-3', 'fieldset legend', 'fieldset', '.badges', '.fa-plus', '.fa-compass',
+            '.fa-star', '.fa-heart', '.leftpanel-item', '.col > .form-group', '.col .form-group button',
+            '.fiche-footing .btn-left button', '.fiche-footing .btn-right button', '.mat-tab-label'
+        ].join(', '))).filter(Boolean);
     }
 
     function applyHiddenStates() {
@@ -213,20 +78,12 @@
             getHideableElements().forEach(el => {
                 const id = getElementIdentifier(el);
                 if (!id) return;
-
-                if (!cleanEnabled) {
-                    el.style.display = '';
-                    el.classList.remove('dimmed-input');
-                    return;
-                }
-
+                el.style.display = hiddenInputs.has(id) ? 'none' : '';
                 if (editMode) {
                     el.style.display = '';
-                    if (hiddenInputs.has(id)) el.classList.add('dimmed-input');
-                    else el.classList.remove('dimmed-input');
+                    el.classList.toggle('dimmed-input', hiddenInputs.has(id));
                 } else {
-                    if (hiddenInputs.has(id)) el.style.display = 'none';
-                    else el.style.display = '';
+                    el.classList.remove('dimmed-input');
                 }
             });
             mutationLock = false;
@@ -281,9 +138,7 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(hiddenInputs)));
         editMode = false;
         document.getElementById('toggle-edit').textContent = 'Show/Hide elements';
-        document.getElementById('toggle-clean').parentElement.style.display = '';
         document.getElementById('edit-hidden').style.display = 'none';
-        document.getElementById('reset-default').style.display = 'none';
         removeEditButtons();
         applyHiddenStates();
     }
@@ -295,60 +150,55 @@
             <textarea>${Array.from(hiddenInputs).join('\n')}</textarea>
             <button id="save-editor">Save</button>
             <button id="close-editor">Close</button>
+            <button id="reset-default-popup">Set default hidden state</button>
         `;
         document.body.appendChild(popup);
 
-        document.getElementById('close-editor').onclick = () => {
-            popup.remove();
-        };
-
+        document.getElementById('close-editor').onclick = () => popup.remove();
         document.getElementById('save-editor').onclick = () => {
             const textarea = popup.querySelector('textarea');
             hiddenInputs = new Set(textarea.value.split('\n').map(x => x.trim()).filter(Boolean));
             confirmEditState();
             popup.remove();
         };
+        document.getElementById('reset-default-popup').onclick = () => {
+            if (confirm('Reset to default hidden fields? This will overwrite current settings.')) {
+                hiddenInputs = new Set(DEFAULT_HIDDEN);
+                confirmEditState();
+                popup.remove();
+            }
+        };
     }
+
+    const ui = document.createElement('div');
+    ui.className = 'floating-ui';
+    ui.innerHTML = `
+        <button id="toggle-edit">Show/Hide elements</button>
+        <button id="edit-hidden" style="display:none">View hidden code</button>
+    `;
+    document.body.appendChild(ui);
 
     document.getElementById('toggle-edit').addEventListener('click', () => {
         editMode = !editMode;
-        const cleanToggle = document.getElementById('toggle-clean').parentElement;
-        const viewButton = document.getElementById('edit-hidden');
-        const resetButton = document.getElementById('reset-default');
-        if (editMode) {
-            document.getElementById('toggle-edit').textContent = 'Confirm';
-            cleanToggle.style.display = 'none';
-            viewButton.style.display = 'block';
-            resetButton.style.display = 'block';
-            addEditButtons();
-            applyHiddenStates();
-        } else {
-            confirmEditState();
-        }
+        document.getElementById('toggle-edit').textContent = editMode ? 'Confirm' : 'Show/Hide elements';
+        document.getElementById('edit-hidden').style.display = editMode ? 'block' : 'none';
+        if (editMode) addEditButtons();
+        else confirmEditState();
+        applyHiddenStates();
     });
 
     document.getElementById('edit-hidden').addEventListener('click', showHiddenEditor);
 
-    document.getElementById('reset-default').addEventListener('click', () => {
-        if (confirm('Reset to default hidden fields? This will overwrite current settings.')) {
-            hiddenInputs = new Set(DEFAULT_HIDDEN);
-            confirmEditState();
-        }
-    });
-
-    document.getElementById('toggle-clean').addEventListener('change', e => {
-        cleanEnabled = e.target.checked;
-        applyHiddenStates();
-    });
-
-    const observer = new MutationObserver(() => {
+    new MutationObserver(() => {
         if (!editMode) applyHiddenStates();
-    });
+    }).observe(document.body, { childList: true, subtree: true });
 
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+    const style = document.createElement('style');
+    fetch('https://nexvia-connect.github.io/ui-cleaner-style/style.css')
+        .then(res => res.text())
+        .then(css => style.textContent = css)
+        .catch(() => console.warn('CSS failed to load'));
+    document.head.appendChild(style);
 
     applyHiddenStates();
 })();
