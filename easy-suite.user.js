@@ -20,8 +20,8 @@
     { key: 'refInsert', label: 'Ref insert', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-ref-insert.user.js' },
     { key: 'uiCleaner', label: 'UI cleaner', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-ui-cleaner.user.js' },
     { key: 'photoResizer', label: 'Photo resizer', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-photo-resizer.user.js' },
-    { key: 'fullWidth', label: 'Full-width desc', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-full-width-description.user.js' },
-    { key: 'listingHelper', label: 'Listing helper', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-listing-creator-helper.user.js' }
+    { key: 'fullWidth', label: 'Full-width description', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-full-width-description.user.js' },
+    { key: 'listingHelper', label: 'Listing creator', url: 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-listing-creator-helper.user.js' }
   ];
 
   const DEFAULTS = SCRIPT_KEYS.reduce((acc, s) => {
