@@ -66,7 +66,7 @@
     const titleSpan = document.createElement('span');
     titleSpan.textContent = 'Easy-Suite';
     const icon = document.createElement('img');
-    icon.src = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/media/easy-suite.png';
+    icon.src = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/media/logo.png';
     icon.style.height = '16px';
     icon.style.marginLeft = '8px';
     icon.style.verticalAlign = 'middle';
