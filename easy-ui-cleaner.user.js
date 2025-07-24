@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy UI cleaner
 // @namespace    http://tampermonkey.net/
-// @version      3.4
+// @version      3.5
 // @description  Toggle visibility of UI elements and save preferences
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -11,7 +11,38 @@
     'use strict';
 
     const STORAGE_KEY = 'hidden_form_elements';
+
+    const DEFAULT_HIDDEN = new Set([
+        "prix_estimé", "prix_m2", "commission_hors_taxe", "commission", "commission_pourcentage",
+        "numero_acte", "surface_totale", "surface_cumulable", "surface_divisible", "titre", "main_url",
+        "court_terme", "orientation", "vue", "tpd_id", "nb_pieces", "nb_sdd", "numero", "colocation_acceptee",
+        "raison_clause_suspensive", "disponibilite", "duree_min_bail", "origine_entree", "btm_ref",
+        "roles_id_commercial_tertiaire", "agence_bureaux_id", "roles_id_commercial_secondaire", "achat_type",
+        "Commercial 2", "Bureau", "Commercial 3", "Projet / Résidence", "Commercial 3 - Sélectionnez - Agostini Mattia  Akpinar Süleyman  Aubrée Romain  Bertrandias Xavier",
+        "Bureau - Sélectionnez -NEXVIA", "Date entrée", "Origine d'entrée", "Date clause exclusive",
+        "Disponibilité", "Raison clause exclusive", "Colocation acceptée", "Durée min. bail", "mois", "N° lot",
+        "Salles de douche", "Orientation", "Vue", "Dalle", "Caractéristiques", "En vente", "Titre",
+        "URL principale", "Court terme", "Commercial 2 - Sélectionnez - Agostini Mattia  Akpinar Süleyman  Aubrée Romain  Bertrandias Xavier",
+        "Prix m²", "Honoraires (TTC %)", "Honoraires (HT)", "Honoraires (TTC)", "Honoraires à la charge de",
+        "Honoraires vendeur %", "Numéro acte", "Date signature", "Totale", "m²", "Surface cumulable",
+        "Surface divisible", "Complément d'adresse", "Publicité", "Remarques", "Police", "Bourse",
+        "Réseaux sociaux", "Parking collectif", "Référence boîtier", "Antenne satellite", "Autre", "Libellé",
+        "Description", "Documents", "0", "Avis d'échéances", "Baux", "CRG", "Contrats d'entretiens", "Courriers",
+        "Divers", "Etats des l", "Rapprochements", "Propriétaire", "Locataire", "Suivi",
+        "Origine d'entrée - Sélectionnez -", "Honoraires à la charge de VendeurAcquéreurAcquéreur & vendeur",
+        "Durée min. bail  mois", "Colocation acceptée - Sélectionnez -OuiNon", "Action", "Passation",
+        "Impression", "Copier", "Archiver", "Supprimer", "Dépublier", "Finances", "Prix de vente *",
+        "Prix estimé", "Charges mensuelles", "Date de fin de validité", "Date du prochain diagnostic",
+        "CO2", "A+", "A", "B", "C", "D", "E", "F", "G", "H", "I", "Date du diagnostic", "Desc", "PDL", "PCE",
+        "Eau", "Collective", "Individuelle gaz", "Individuelle électrique"
+    ]);
+
     let hiddenInputs = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+    if (!localStorage.getItem(STORAGE_KEY)) {
+        hiddenInputs = DEFAULT_HIDDEN;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(hiddenInputs)));
+    }
+
     let editMode = false;
     let cleanEnabled = true;
     let mutationLock = false;
