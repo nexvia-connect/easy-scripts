@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy UI cleaner
 // @namespace    http://tampermonkey.net/
-// @version      3.5
+// @version      3.6
 // @description  Toggle visibility of UI elements and save preferences
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -156,6 +156,7 @@
     ui.innerHTML = `
         <button id="toggle-edit">Show/Hide elements</button>
         <button id="edit-hidden" style="display:none">View hidden code</button>
+        <button id="reset-default" style="display:none">Set default hidden state</button>
         <label><input type="checkbox" id="toggle-clean" checked> Clean Easy</label>
     `;
     document.body.appendChild(ui);
@@ -282,6 +283,7 @@
         document.getElementById('toggle-edit').textContent = 'Show/Hide elements';
         document.getElementById('toggle-clean').parentElement.style.display = '';
         document.getElementById('edit-hidden').style.display = 'none';
+        document.getElementById('reset-default').style.display = 'none';
         removeEditButtons();
         applyHiddenStates();
     }
@@ -312,10 +314,12 @@
         editMode = !editMode;
         const cleanToggle = document.getElementById('toggle-clean').parentElement;
         const viewButton = document.getElementById('edit-hidden');
+        const resetButton = document.getElementById('reset-default');
         if (editMode) {
             document.getElementById('toggle-edit').textContent = 'Confirm';
             cleanToggle.style.display = 'none';
             viewButton.style.display = 'block';
+            resetButton.style.display = 'block';
             addEditButtons();
             applyHiddenStates();
         } else {
@@ -324,6 +328,13 @@
     });
 
     document.getElementById('edit-hidden').addEventListener('click', showHiddenEditor);
+
+    document.getElementById('reset-default').addEventListener('click', () => {
+        if (confirm('Reset to default hidden fields? This will overwrite current settings.')) {
+            hiddenInputs = new Set(DEFAULT_HIDDEN);
+            confirmEditState();
+        }
+    });
 
     document.getElementById('toggle-clean').addEventListener('change', e => {
         cleanEnabled = e.target.checked;
