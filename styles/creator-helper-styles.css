@@ -174,3 +174,8 @@ textarea#elch-inline-input {
 #elch-inline-save:hover, #elch-inline-reset:hover {
   background: #333;
 }
+
+.material-icons {
+  font-size: 38px;
+  vertical-align: middle;
+}
