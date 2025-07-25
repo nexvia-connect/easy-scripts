@@ -58,12 +58,14 @@
 .elch-entry {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 4px 10px;
   border-top: 1px solid #333;
   font-family: sans-serif;
   font-size: 13px;
   color: #eee;
 }
+
 
 .elch-entry span.copy {
   cursor: pointer;
@@ -141,4 +143,9 @@
   cursor: pointer;
   text-align: center;
   font-family: 'Open Sans', sans-serif;
+}
+
+.material-icons {
+  font-size: 18px !important;
+  vertical-align: middle;
 }
