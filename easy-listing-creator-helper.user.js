@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      2.9
+// @version      3.4
 // @description  Floating JSON UI for structured listing data
 // @match        *://*/*
 // @grant        GM_setClipboard
@@ -29,102 +29,49 @@
     wrapper.className = 'elch-wrapper';
     document.body.appendChild(wrapper);
 
-    const collapsedBar = document.createElement('div');
-    collapsedBar.className = 'elch-collapsed-bar';
-    collapsedBar.innerHTML = 'Helper ▲';
-    wrapper.appendChild(collapsedBar);
+    const collapsedCircle = document.createElement('div');
+    collapsedCircle.className = 'elch-collapsed-circle';
+    collapsedCircle.innerHTML = '<span class="material-icons">add</span>';
+    wrapper.appendChild(collapsedCircle);
 
     const sectionBox = document.createElement('div');
     sectionBox.className = 'elch-sections';
     wrapper.appendChild(sectionBox);
 
-    function updateArrowState() {
-        collapsedBar.innerHTML = wrapper.classList.contains('expanded') ? 'Helper ▼' : 'Helper ▲';
-        if (!wrapper.classList.contains('expanded') && sectionBox.innerHTML.trim() === '') {
-            sectionBox.innerHTML = '<div style="color:#999; font-family:sans-serif; font-size:12px; padding:6px 10px;">Add code to helper using the + icon on the right.</div>';
-        }
+    function expandUI() {
+        wrapper.classList.add('expanded');
+        collapsedCircle.style.display = 'none';
+    }
+
+    function collapseUI() {
+        wrapper.classList.remove('expanded');
+        collapsedCircle.style.display = 'flex';
     }
 
     wrapper.addEventListener('mouseenter', () => {
         clearTimeout(collapseTimeout);
-        wrapper.classList.add('expanded');
-        updateArrowState();
     });
 
     wrapper.addEventListener('mouseleave', () => {
         collapseTimeout = setTimeout(() => {
-            wrapper.classList.remove('expanded');
-            updateArrowState();
+            collapseUI();
         }, 1000);
     });
 
-    collapsedBar.addEventListener('click', () => {
-        wrapper.classList.remove('expanded');
-        updateArrowState();
-        clearTimeout(collapseTimeout);
+    collapsedCircle.addEventListener('click', () => {
+        if (wrapper.classList.contains('expanded')) {
+            collapseUI();
+        } else {
+            expandUI();
+        }
     });
 
     document.addEventListener('click', (e) => {
         if (!wrapper.contains(e.target)) {
-            wrapper.classList.remove('expanded');
-            updateArrowState();
+            collapseUI();
             clearTimeout(collapseTimeout);
         }
     });
-
-    let popup = null;
-
-    function createPopup() {
-        if (popup) return;
-        popup = document.createElement('div');
-        popup.className = 'elch-popup';
-        popup.innerHTML = `
-            <textarea id="elch-json-input"></textarea><br>
-            <button id="elch-save">Save</button>
-            <button id="elch-close">Close</button>
-            <button id="elch-reset">Reset</button>
-        `;
-        document.body.appendChild(popup);
-
-        requestAnimationFrame(() => popup.classList.add('show'));
-
-        document.getElementById('elch-save').onclick = () => {
-            try {
-                const txt = document.getElementById('elch-json-input').value;
-                jsonData = JSON.parse(txt);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(jsonData));
-                localStorage.setItem(LAST_USED_KEY, Date.now());
-                showSections();
-                popup.classList.remove('show');
-                setTimeout(() => {
-                    popup.remove();
-                    popup = null;
-                }, 300);
-            } catch (e) {
-                alert('Invalid JSON');
-            }
-        };
-
-        document.getElementById('elch-close').onclick = () => {
-            popup.classList.remove('show');
-            setTimeout(() => {
-                popup.remove();
-                popup = null;
-            }, 300);
-        };
-
-        document.getElementById('elch-reset').onclick = () => {
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem(LAST_USED_KEY);
-            jsonData = {};
-            sectionBox.innerHTML = '<div style="color:#999; font-family:sans-serif; font-size:12px; padding:6px 10px;">Add code to helper</div>';
-            popup.classList.remove('show');
-            setTimeout(() => {
-                popup.remove();
-                popup = null;
-            }, 300);
-        };
-    }
 
     function extractMarkdownLink(str) {
         const match = str.match(/\[([^\]]+)]\(([^)]+)\)/);
@@ -132,15 +79,51 @@
     }
 
     function collapseImmediately() {
-        wrapper.classList.remove('expanded');
-        updateArrowState();
+        collapseUI();
         clearTimeout(collapseTimeout);
     }
 
     function showSections() {
         sectionBox.innerHTML = '';
-        const allSections = [];
 
+        const importSection = document.createElement('details');
+        importSection.className = 'elch-section';
+        const importSummary = document.createElement('summary');
+        importSummary.textContent = 'Import code';
+        importSection.appendChild(importSummary);
+        const importBox = document.createElement('div');
+        importBox.className = 'elch-entry';
+        importBox.style.flexDirection = 'column';
+        importBox.innerHTML = `
+            <textarea id="elch-inline-input" style="width:100%;height:100px;font-family:monospace;font-size:12px;background:#111;color:#eee;border:1px solid #444;"></textarea><br>
+            <button id="elch-inline-save">Save</button>
+            <button id="elch-inline-reset">Reset</button>
+        `;
+        importSection.appendChild(importBox);
+        sectionBox.appendChild(importSection);
+
+        document.getElementById('elch-inline-save').onclick = () => {
+            try {
+                const txt = document.getElementById('elch-inline-input').value;
+                jsonData = JSON.parse(txt);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(jsonData));
+                localStorage.setItem(LAST_USED_KEY, Date.now());
+                showSections();
+            } catch (e) {
+                alert('Invalid JSON');
+            }
+        };
+
+        document.getElementById('elch-inline-reset').onclick = () => {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(LAST_USED_KEY);
+            jsonData = {};
+            showSections();
+        };
+
+        if (!jsonData || Object.keys(jsonData).length === 0) return;
+
+        const allSections = [];
         for (const section in jsonData) {
             const details = document.createElement('details');
             details.className = 'elch-section';
@@ -158,7 +141,6 @@
             for (const key in entries) {
                 const row = document.createElement('div');
                 row.className = 'elch-entry';
-                row.style.alignItems = 'center';
                 const rawVal = entries[key];
                 const val = String(rawVal);
                 let content = '';
@@ -211,16 +193,6 @@
         }
     }
 
-    const mainBtn = document.createElement('div');
-    mainBtn.className = 'elch-floating-button';
-    mainBtn.innerHTML = '<span class="material-icons">add</span>';
-    document.body.appendChild(mainBtn);
-
-    mainBtn.onclick = () => {
-        mainBtn.classList.toggle('spin');
-        createPopup();
-    };
-
     const saved = localStorage.getItem(STORAGE_KEY);
     const lastUsed = parseInt(localStorage.getItem(LAST_USED_KEY), 10);
     const now = Date.now();
@@ -230,12 +202,10 @@
         try {
             jsonData = JSON.parse(saved);
             localStorage.setItem(LAST_USED_KEY, now);
-            showSections();
         } catch (e) {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem(LAST_USED_KEY);
         }
-    } else {
-        sectionBox.innerHTML = '<div style="color:#999; font-family:sans-serif; font-size:12px; padding:6px 10px;">Add code to helper</div>';
     }
+    showSections();
 })();
