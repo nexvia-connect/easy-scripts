@@ -181,8 +181,10 @@ textarea#elch-inline-input {
 }
 
 .elch-pipedrive-icon {
-  width: 15px;
-  height: 15px;
-  margin-left: 10px;
-  margin-top: 2px;
+    position: relative;
+    width: 15px;
+    height: 15px;
+    margin-left: 6px;
+    margin-top: 2px;
+    bottom: 2px;
 }
