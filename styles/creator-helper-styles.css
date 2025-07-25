@@ -27,6 +27,24 @@
   cursor: default;
 }
 
+.elch-collapsed-circle {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 48px;
+  height: 48px;
+  background: #1F4099;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+  z-index: 10000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
 .elch-sections {
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -53,6 +71,7 @@
   padding: 2px 10px;
   background: #111;
   color: white;
+  font-size: 14px;
 }
 
 .elch-entry {
@@ -105,6 +124,10 @@
   z-index: 9999;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
 }
 
 .elch-popup textarea {
@@ -133,6 +156,16 @@
 
 .elch-popup button:hover {
   background: #333;
+}
+
+.elch-popup.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.elch-floating-button.spin .material-icons {
+  transform: rotate(45deg);
+  transition: transform 0.3s ease;
 }
 
 .elch-download {
