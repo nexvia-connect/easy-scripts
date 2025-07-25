@@ -1,7 +1,7 @@
 {
   "refInsert": "Automatically inserts the reference ID into the Nexvia links while typing the description.",
   "uiCleaner": "Enables the UI cleaner to hide unused or distracting elements from the interface.",
-  "photoResizer": "Applies a consistent 3:2 aspect ratio to photos and improves resizing UX.",
+  "photoResizer": "Applies a consistent 3:2 aspect ratio to photos section and improves resizing UX.",
   "fullWidth": "Ensures the description field is shown in full width for easier editing.",
   "listingHelper": "Import a code, and get all the listing creation info straight from Easy, with ultra practical copy/paste capabilities."
 }
