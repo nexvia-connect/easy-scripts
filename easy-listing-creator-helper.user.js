@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      3.4
+// @version      3.5
 // @description  Floating JSON UI for structured listing data
-// @match        *://*/*
+// @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
 
@@ -102,6 +102,8 @@
         importSection.appendChild(importBox);
         sectionBox.appendChild(importSection);
 
+        const allSections = [importSection];
+
         document.getElementById('elch-inline-save').onclick = () => {
             try {
                 const txt = document.getElementById('elch-inline-input').value;
@@ -123,19 +125,12 @@
 
         if (!jsonData || Object.keys(jsonData).length === 0) return;
 
-        const allSections = [];
         for (const section in jsonData) {
             const details = document.createElement('details');
             details.className = 'elch-section';
             const summary = document.createElement('summary');
             summary.textContent = section;
             details.appendChild(summary);
-
-            summary.addEventListener('click', () => {
-                allSections.forEach(sec => {
-                    if (sec !== details) sec.removeAttribute('open');
-                });
-            });
 
             const entries = jsonData[section];
             for (const key in entries) {
@@ -191,6 +186,16 @@
             allSections.push(details);
             sectionBox.appendChild(details);
         }
+
+        const detailNodes = sectionBox.querySelectorAll('details');
+        detailNodes.forEach((detailsEl) => {
+            const summary = detailsEl.querySelector('summary');
+            summary?.addEventListener('click', () => {
+                detailNodes.forEach((other) => {
+                    if (other !== detailsEl) other.removeAttribute('open');
+                });
+            });
+        });
     }
 
     const saved = localStorage.getItem(STORAGE_KEY);
