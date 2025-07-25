@@ -187,10 +187,11 @@
 
                 const copyBtn = row.querySelector('.copy');
                 if (copyBtn && !copyBtn.classList.contains('fetch-txt')) {
-                    copyBtn.onclick = () => {
+                    copyBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
                         GM_setClipboard(val);
                         collapseImmediately();
-                    };
+                    });
                 }
 
                 const fetchIcon = row.querySelector('.fetch-txt');
