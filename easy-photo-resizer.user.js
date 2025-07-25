@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Easy photo resizer
+// @name         Easy photo resizer with ratio warning badge
 // @namespace    http://tampermonkey.net/
-// @version      2.9
-// @description  Resize photo cards and apply 3:2 aspect ratio without animations
+// @version      3.3
+// @description  Resize photo cards and mark non-3:2 images with a custom tooltip, ignoring plans
 // @match        *://*/*
 // @grant        none
 // ==/UserScript==
@@ -11,6 +11,7 @@
   'use strict';
 
   let currentPercent = 10;
+  const TOLERANCE = 0.03;
 
   const applyStyles = () => {
     const container = document.getElementById('photo-list');
@@ -52,11 +53,12 @@
         cardDiv.style.height = 'auto';
         cardDiv.style.minHeight = 'unset';
         cardDiv.style.maxHeight = 'unset';
-        cardDiv.style.overflow = 'hidden';
+        cardDiv.style.overflow = 'visible';
         cardDiv.style.display = 'flex';
         cardDiv.style.flexDirection = 'column';
         cardDiv.style.marginBottom = '0px';
         cardDiv.style.transition = '';
+        cardDiv.style.position = 'relative';
       }
 
       const header = card.querySelector('.card-header');
@@ -79,6 +81,76 @@
         img.style.width = '100%';
         img.style.objectFit = 'cover';
         img.style.transition = '';
+
+        img.onload = () => {
+          const titleText = (card.querySelector('.title-photo')?.textContent || '').toLowerCase();
+          if (titleText.includes('plan')) return;
+
+          const ratio = img.naturalWidth / img.naturalHeight;
+          const isClose = Math.abs(ratio - 1.5) <= TOLERANCE;
+
+          const existingBadge = cardDiv.querySelector('.ratio-badge');
+          if (existingBadge) existingBadge.remove();
+
+          const existingTooltip = cardDiv.querySelector('.ratio-tooltip');
+          if (existingTooltip) existingTooltip.remove();
+
+          if (!isClose) {
+            const roundedRatio = ratio.toFixed(2);
+
+            const badge = document.createElement('div');
+            badge.className = 'ratio-badge';
+            badge.innerText = 'priority_high';
+
+            Object.assign(badge.style, {
+              position: 'absolute',
+              top: '6px',
+              left: '6px',
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              background: '#FC3366',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'default',
+              zIndex: '9999',
+              fontFamily: 'Material Icons'
+            });
+
+            const tooltip = document.createElement('div');
+            tooltip.className = 'ratio-tooltip';
+            tooltip.innerText = `Image is ${roundedRatio}:1 ratio instead of 3:2`;
+
+            Object.assign(tooltip.style, {
+              position: 'absolute',
+              top: '32px',
+              left: '6px',
+              background: '#FC3366',
+              color: 'white',
+              padding: '4px 8px',
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+              borderRadius: '4px',
+              zIndex: '9999',
+              display: 'none',
+              pointerEvents: 'none'
+            });
+
+            badge.addEventListener('mouseenter', () => {
+              tooltip.style.display = 'block';
+            });
+            badge.addEventListener('mouseleave', () => {
+              tooltip.style.display = 'none';
+            });
+
+            cardDiv.appendChild(badge);
+            cardDiv.appendChild(tooltip);
+          }
+        };
       }
     });
 
