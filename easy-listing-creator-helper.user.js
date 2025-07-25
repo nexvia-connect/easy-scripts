@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      3.5
+// @version      3.6
 // @description  Floating JSON UI for structured listing data
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -89,7 +89,7 @@
         const importSection = document.createElement('details');
         importSection.className = 'elch-section';
         const importSummary = document.createElement('summary');
-        importSummary.textContent = 'Import code';
+        importSummary.textContent = '0. Import code';
         importSection.appendChild(importSummary);
         const importBox = document.createElement('div');
         importBox.className = 'elch-entry';
