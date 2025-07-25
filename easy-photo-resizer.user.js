@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy photo resizer
 // @namespace    http://tampermonkey.net/
-// @version      2.8
-// @description  Better UX for the Easy photo module - 3:2 ratio via aspect-ratio, no transition animations
+// @version      2.9
+// @description  Resize photo cards and apply 3:2 aspect ratio without animations
 // @match        *://*/*
 // @grant        none
 // ==/UserScript==
@@ -29,9 +29,8 @@
 
       const newWidth = `${currentPercent}%`;
       const newFlex = `0 0 ${newWidth}`;
-      if (card.style.maxWidth !== newWidth) card.style.maxWidth = newWidth;
-      if (card.style.flex !== newFlex) card.style.flex = newFlex;
-
+      card.style.maxWidth = newWidth;
+      card.style.flex = newFlex;
       card.style.transition = '';
 
       const ellipsis = card.querySelector('.fa-ellipsis-h');
@@ -83,9 +82,6 @@
       }
     });
 
-    const tabContainer = document.querySelector('.mat-tab-label-container');
-    if (tabContainer) tabContainer.style.display = 'none';
-
     const folderAction = document.querySelector('.folder-action');
     if (folderAction) {
       folderAction.style.display = 'flex';
@@ -133,28 +129,6 @@
         folderAction.parentNode.insertBefore(container, folderAction.nextSibling);
       }
     }
-
-    const progress = document.querySelector('.progress-content');
-    if (progress) progress.remove();
-
-    const virtualVisitField = document.querySelector('input#visite_virtuelle_en');
-    if (virtualVisitField && virtualVisitField.closest('.form-group.col-12')) {
-      virtualVisitField.closest('.form-group.col-12').style.display = 'none';
-    }
-
-    const videoField = document.querySelector('input#video_1');
-    if (videoField && videoField.closest('.form-group.col-12')) {
-      videoField.closest('.form-group.col-12').style.display = 'none';
-    }
-
-    const virtualVisitLegend = Array.from(document.querySelectorAll('legend')).find(el => el.textContent.trim() === 'Visite virtuelle');
-    if (virtualVisitLegend) virtualVisitLegend.style.display = 'none';
-
-    const videoLegend = Array.from(document.querySelectorAll('legend')).find(el => el.textContent.trim() === 'Vidéo');
-    if (videoLegend) videoLegend.style.display = 'none';
-
-    const photosLegend = Array.from(document.querySelectorAll('legend')).find(el => el.textContent.trim() === 'Photos');
-    if (photosLegend) photosLegend.style.display = 'none';
 
     return true;
   };
