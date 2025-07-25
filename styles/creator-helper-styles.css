@@ -186,3 +186,23 @@
   font-size: 18px !important;
   vertical-align: middle;
 }
+
+#elch-inline-save,
+#elch-inline-reset {
+  background: #1F4099;
+  border: 1px solid #3c5fad;
+  color: white;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  padding: 4px 10px;
+  margin-right: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+#elch-inline-save:hover,
+#elch-inline-reset:hover {
+  background: #3355a1;
+}
+
