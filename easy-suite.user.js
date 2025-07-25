@@ -181,6 +181,15 @@
 
   function init() {
     loadStyle();
+  
+    const faviconUrl = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/media/logo.png';
+    const oldFavicon = document.querySelector('link[rel="icon"]');
+    if (oldFavicon) oldFavicon.remove();
+    const newFavicon = document.createElement('link');
+    newFavicon.rel = 'icon';
+    newFavicon.href = faviconUrl;
+    document.head.appendChild(newFavicon);
+  
     fetch(HELPER_URL)
       .then(res => res.json())
       .then(json => {
@@ -191,6 +200,7 @@
         helperMap = {};
         createPanel();
       });
+  
     loadScripts();
   }
 
