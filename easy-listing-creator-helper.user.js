@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      3.6
+// @version      3.7
 // @description  Floating JSON UI for structured listing data
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -86,6 +86,13 @@
     function showSections() {
         sectionBox.innerHTML = '';
 
+        if (jsonData.title) {
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'elch-title';
+            titleDiv.textContent = jsonData.title;
+            sectionBox.appendChild(titleDiv);
+        }
+
         const importSection = document.createElement('details');
         importSection.className = 'elch-section';
         const importSummary = document.createElement('summary');
@@ -126,6 +133,7 @@
         if (!jsonData || Object.keys(jsonData).length === 0) return;
 
         for (const section in jsonData) {
+            if (section === 'title') continue;
             const details = document.createElement('details');
             details.className = 'elch-section';
             const summary = document.createElement('summary');
