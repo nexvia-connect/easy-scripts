@@ -190,7 +190,7 @@
                     copyBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         GM_setClipboard(val);
-                        collapseImmediately();
+                        setTimeout(collapseImmediately, 0);
                     });
                 }
 
