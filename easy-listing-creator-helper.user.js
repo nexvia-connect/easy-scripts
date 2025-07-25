@@ -68,12 +68,13 @@
 
     document.addEventListener('click', (e) => {
         const target = e.target;
+        const allowIds = ['elch-inline-save', 'elch-inline-reset'];
+
         if (!wrapper.contains(target)) {
             collapseUI();
             clearTimeout(collapseTimeout);
         } else if (
-            target.id === 'elch-inline-save' ||
-            target.id === 'elch-inline-reset'
+            allowIds.includes(target.id)
         ) {
             // allow interaction
         } else {
