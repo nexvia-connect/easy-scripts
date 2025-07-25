@@ -2,35 +2,38 @@
   position: fixed;
   bottom: 40px;
   right: 90px;
-  width: 500px;
-  transition: all 0.3s ease;
-  z-index: 9999;
-  background: #000;
-  border: 1px solid #555;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-  overflow: hidden;
-  max-height: 48px;
-}
-
-.elch-wrapper.expanded {
-  max-height: 70vh;
-}
-
-.elch-collapsed-circle {
   width: 48px;
   height: 48px;
   background: #1F4099;
   border-radius: 50%;
+  transition: all 0.3s ease;
+  z-index: 9999;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.elch-wrapper.expanded {
+  width: 500px;
+  height: auto;
+  max-height: 70vh;
+  background: #000;
+  border-radius: 8px;
+  border: 1px solid #555;
+}
+
+.elch-collapsed-circle {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
   color: white;
   cursor: pointer;
-  z-index: 10000;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-  margin: 0 auto;
+}
+
+.elch-wrapper.expanded .elch-collapsed-circle {
+  display: none;
 }
 
 .elch-sections {
@@ -74,13 +77,34 @@
 }
 
 .elch-entry .material-icons {
-  font-size: 16px !important;
+  font-size: 14px;
   vertical-align: middle;
 }
 
 .elch-entry span.copy {
   cursor: pointer;
   color: #6078BF;
+}
+
+.elch-popup {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  background: #000;
+  border: 1px solid #555;
+  padding: 12px;
+  width: 400px;
+  z-index: 9999;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.elch-popup.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .elch-popup textarea {
@@ -93,26 +117,22 @@
   border: 1px solid #444;
 }
 
-.elch-popup button,
-#elch-inline-save,
-#elch-inline-reset {
-  background: #1F4099;
-  border: 1px solid #3c5fad;
-  color: white;
-  font-family: 'Open Sans', sans-serif;
-  font-size: 12px;
-  padding: 4px 10px;
+.elch-popup button {
   margin-top: 8px;
-  margin-right: 6px;
-  border-radius: 4px;
+  margin-right: 8px;
+  background: #222;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 3px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-family: 'Open Sans', sans-serif;
   cursor: pointer;
-  transition: background 0.2s ease;
+  text-align: center;
 }
 
-.elch-popup button:hover,
-#elch-inline-save:hover,
-#elch-inline-reset:hover {
-  background: #3355a1;
+.elch-popup button:hover {
+  background: #333;
 }
 
 .elch-download {
@@ -127,4 +147,28 @@
   cursor: pointer;
   text-align: center;
   font-family: 'Open Sans', sans-serif;
+}
+
+#elch-inline-save,
+#elch-inline-reset {
+  background: #1F4099;
+  border: 1px solid #3c5fad;
+  color: white;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  padding: 4px 10px;
+  margin-right: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+#elch-inline-save:hover,
+#elch-inline-reset:hover {
+  background: #3355a1;
+}
+
+.material-icons {
+  font-size: 18px !important;
+  vertical-align: middle;
 }
