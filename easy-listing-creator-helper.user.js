@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      3.8
+// @version      3.9
 // @description  Floating JSON UI for structured listing data
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -67,8 +67,16 @@
     });
 
     document.addEventListener('click', (e) => {
-        if (!wrapper.contains(e.target)) {
+        const target = e.target;
+        if (!wrapper.contains(target)) {
             collapseUI();
+            clearTimeout(collapseTimeout);
+        } else if (
+            target.id === 'elch-inline-save' ||
+            target.id === 'elch-inline-reset'
+        ) {
+            // allow interaction
+        } else {
             clearTimeout(collapseTimeout);
         }
     });
@@ -105,7 +113,7 @@
         const currentJsonString = Object.keys(jsonData).length > 0 ? JSON.stringify(jsonData, null, 2) : '';
         importBox.innerHTML = `
             <textarea id="elch-inline-input" style="width:100%;height:100px;font-family:monospace;font-size:12px;background:#111;color:#eee;border:1px solid #444;">${currentJsonString}</textarea><br>
-            <button id="elch-inline-save">Save</button>
+            <button id="elch-inline-save">Load</button>
             <button id="elch-inline-reset">Reset</button>
         `;
         importSection.appendChild(importBox);
