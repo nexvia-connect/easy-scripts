@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      3.9
+// @version      4.0
 // @description  Floating JSON UI for structured listing data
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -97,7 +97,16 @@
         if (jsonData.title) {
             const titleDiv = document.createElement('div');
             titleDiv.className = 'elch-title';
-            titleDiv.textContent = jsonData.title;
+            const titleText = document.createElement('span');
+            titleText.textContent = jsonData.title;
+
+            const pipeLink = document.createElement('a');
+            pipeLink.href = jsonData['1. Informations complémentaires']?.['URL du deal Pipedrive'] || '#';
+            pipeLink.target = '_blank';
+            pipeLink.innerHTML = `<img src="https://nexvia-connect.github.io/easy-scripts/media/pipedrive-favicon.png" class="elch-pipedrive-icon" />`;
+
+            titleDiv.appendChild(titleText);
+            titleDiv.appendChild(pipeLink);
             sectionBox.appendChild(titleDiv);
         }
 
