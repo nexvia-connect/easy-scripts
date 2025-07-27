@@ -124,18 +124,16 @@
     suite.appendChild(body);
     document.body.appendChild(suite);
 
-    document.addEventListener('click', (e) => {
-      if (!suite.contains(e.target)) suite.classList.add('easy-suite-collapsed');
-    });
-
     suite.addEventListener('mouseenter', () => {
       suite.classList.remove('easy-suite-collapsed');
       if (cleaner) cleaner.style.display = '';
     });
 
-    suite.addEventListener('mouseleave', () => {
-      suite.classList.add('easy-suite-collapsed');
-      if (cleaner) cleaner.style.display = 'none';
+    document.addEventListener('click', (e) => {
+      if (!suite.contains(e.target) && !cleaner?.contains(e.target)) {
+        suite.classList.add('easy-suite-collapsed');
+        if (cleaner) cleaner.style.display = 'none';
+      }
     });
 
     if (settings['uiCleaner']) {
@@ -153,6 +151,35 @@
       };
       tryAttachCleaner();
     }
+
+    let isDragging = false;
+    let offsetX = 0, offsetY = 0;
+
+    header.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      offsetX = e.clientX - suite.getBoundingClientRect().left;
+      offsetY = e.clientY - suite.getBoundingClientRect().top;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const newX = e.clientX - offsetX;
+      const newY = e.clientY - offsetY;
+      suite.style.left = `${newX}px`;
+      suite.style.top = `${newY}px`;
+      if (cleaner) {
+        cleaner.style.left = `${newX}px`;
+        cleaner.style.top = `${newY + suite.offsetHeight + 5}px`;
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isDragging) {
+        savePosition(parseInt(suite.style.left), parseInt(suite.style.top));
+        isDragging = false;
+      }
+    });
   }
 
   function loadScripts() {
