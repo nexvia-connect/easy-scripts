@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Suite Loader
 // @namespace    http://tampermonkey.net/
-// @version      2.8
+// @version      2.9
 // @description  Load and control Easy Suite scripts with UI toggle, collapsed mode, and persistence
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -56,7 +56,18 @@
       .then(res => res.text())
       .then(css => {
         const style = document.createElement('style');
-        style.textContent = css;
+        style.textContent = css + `
+          .easy-suite-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.25s ease, opacity 0.25s ease;
+            opacity: 0;
+          }
+          .floating-ui:not(.easy-suite-collapsed) .easy-suite-body {
+            max-height: 400px;
+            opacity: 1;
+          }
+        `;
         document.head.appendChild(style);
       });
   }
