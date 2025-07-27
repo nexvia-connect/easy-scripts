@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Suite Loader
 // @namespace    http://tampermonkey.net/
-// @version      2.7
-// @description  Load and control Easy Suite scripts with UI toggle and persistence
+// @version      2.8
+// @description  Load and control Easy Suite scripts with UI toggle, collapsed mode, and persistence
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
 // @connect      raw.githubusercontent.com
@@ -33,6 +33,8 @@
   settings = { ...DEFAULTS, ...settings };
 
   let helperMap = {};
+  let suite = null;
+  let cleaner = null;
 
   function saveSettings() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -61,9 +63,8 @@
 
   function createPanel() {
     const pos = loadPosition();
-
-    const suite = document.createElement('div');
-    suite.className = 'floating-ui';
+    suite = document.createElement('div');
+    suite.className = 'floating-ui easy-suite-collapsed';
     suite.style.left = `${pos.left}px`;
     suite.style.top = `${pos.top}px`;
     suite.style.position = 'fixed';
@@ -123,7 +124,20 @@
     suite.appendChild(body);
     document.body.appendChild(suite);
 
-    let cleaner = null;
+    document.addEventListener('click', (e) => {
+      if (!suite.contains(e.target)) suite.classList.add('easy-suite-collapsed');
+    });
+
+    suite.addEventListener('mouseenter', () => {
+      suite.classList.remove('easy-suite-collapsed');
+      if (cleaner) cleaner.style.display = '';
+    });
+
+    suite.addEventListener('mouseleave', () => {
+      suite.classList.add('easy-suite-collapsed');
+      if (cleaner) cleaner.style.display = 'none';
+    });
+
     if (settings['uiCleaner']) {
       const tryAttachCleaner = () => {
         cleaner = document.querySelector('.floating-ui-cleaner');
@@ -132,41 +146,13 @@
           cleaner.style.left = suite.style.left;
           cleaner.style.top = `${suite.getBoundingClientRect().top + suite.offsetHeight + 5}px`;
           cleaner.style.zIndex = '9998';
+          cleaner.style.display = 'none';
         } else {
           setTimeout(tryAttachCleaner, 200);
         }
       };
       tryAttachCleaner();
     }
-
-    let isDragging = false;
-    let offsetX = 0, offsetY = 0;
-
-    header.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      offsetX = e.clientX - suite.getBoundingClientRect().left;
-      offsetY = e.clientY - suite.getBoundingClientRect().top;
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const newX = e.clientX - offsetX;
-      const newY = e.clientY - offsetY;
-      suite.style.left = `${newX}px`;
-      suite.style.top = `${newY}px`;
-      if (cleaner) {
-        cleaner.style.left = `${newX}px`;
-        cleaner.style.top = `${newY + suite.offsetHeight + 5}px`;
-      }
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        savePosition(parseInt(suite.style.left), parseInt(suite.style.top));
-        isDragging = false;
-      }
-    });
   }
 
   function loadScripts() {
@@ -181,7 +167,7 @@
 
   function init() {
     loadStyle();
-  
+
     const faviconUrl = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/media/logo.png';
     const oldFavicon = document.querySelector('link[rel="icon"]');
     if (oldFavicon) oldFavicon.remove();
@@ -189,7 +175,7 @@
     newFavicon.rel = 'icon';
     newFavicon.href = faviconUrl;
     document.head.appendChild(newFavicon);
-  
+
     fetch(HELPER_URL)
       .then(res => res.json())
       .then(json => {
@@ -200,7 +186,7 @@
         helperMap = {};
         createPanel();
       });
-  
+
     loadScripts();
   }
 
