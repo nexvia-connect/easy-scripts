@@ -177,7 +177,7 @@
                 let content = '';
 
                 const isCopyOnly = (key === 'Visite virtuelle' || key === 'URL du deal Pipedrive');
-                const isTxtCopyOnly = key === 'Download file';
+                const isTxtCopyOnly = key === 'Download description';
                 const markdown = extractMarkdownLink(val);
 
                 if (val === 'true' || val === 'false') {
