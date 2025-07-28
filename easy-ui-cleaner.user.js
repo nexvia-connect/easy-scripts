@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Easy UI cleaner (v3.17 Top-right, titled)
+// @name         Easy UI cleaner (v3.18 Top-right, titled)
 // @namespace    http://tampermonkey.net/
-// @version      3.17
+// @version      3.18
 // @description  Toggle visibility of UI elements and save preferences with precise full path control and multi-toggle per block
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -51,7 +51,7 @@
             '.form-group', '.row.mb-3', 'fieldset', 'legend', '.badges', '.fa-plus', '.fa-compass',
             '.fa-star', '.fa-heart', '.leftpanel-item', '.col > .form-group', '.col .form-group button',
             '.fiche-footing .btn-left button', '.fiche-footing .btn-right button', '.mat-tab-label',
-            '.card.col-3' // Facebook block
+            '.card.col-3'
         ].join(', '))).filter(Boolean);
     }
 
@@ -172,7 +172,7 @@
     ui.innerHTML = `
         <h3>UI cleaner</h3>
         <button id="toggle-edit">Show/Hide elements</button>
-        <button id="edit-hidden" style="display:none">View hidden code</button>
+        <button id="edit-hidden" style="display:none"><span class="material-icons" style="font-size:16px; vertical-align:middle; margin-right:4px;">settings</span>Options</button>
     `;
     document.body.appendChild(ui);
 
@@ -190,6 +190,11 @@
     new MutationObserver(() => {
         if (!editMode) applyHiddenStates();
     }).observe(document.body, { childList: true, subtree: true });
+
+    const iconLink = document.createElement('link');
+    iconLink.rel = 'stylesheet';
+    iconLink.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
+    document.head.appendChild(iconLink);
 
     const style = document.createElement('style');
     fetch('https://nexvia-connect.github.io/easy-scripts/styles/ui-cleaner-style.css')
