@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Easy UI cleaner (v3.18 Top-right, titled)
+// @name         Easy UI cleaner (v3.19 Top-right, titled)
 // @namespace    http://tampermonkey.net/
-// @version      3.18
+// @version      3.19
 // @description  Toggle visibility of UI elements and save preferences with precise full path control and multi-toggle per block
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -135,7 +135,6 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(hiddenInputs)));
         editMode = false;
         document.getElementById('toggle-edit').textContent = 'Show/Hide elements';
-        document.getElementById('edit-hidden').style.display = 'none';
         removeEditButtons();
         applyHiddenStates();
     }
@@ -173,7 +172,7 @@
     ui.innerHTML = `
         <h3>UI cleaner</h3>
         <button id="toggle-edit">Show/Hide elements</button>
-        <button id="edit-hidden" style="display:none">
+        <button id="edit-hidden">
             <span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">settings</span>Options
         </button>
     `;
@@ -182,7 +181,6 @@
     document.getElementById('toggle-edit').addEventListener('click', () => {
         editMode = !editMode;
         document.getElementById('toggle-edit').textContent = editMode ? 'Confirm' : 'Show/Hide elements';
-        document.getElementById('edit-hidden').style.display = editMode ? 'block' : 'none';
         if (editMode) addEditButtons();
         else confirmEditState();
         applyHiddenStates();
