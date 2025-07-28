@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.1
-// @description  Floating JSON UI for structured listing data
+// @version      4.3
+// @description  Floating JSON UI for structured listing data (refactored types)
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -48,38 +48,19 @@
         collapsedCircle.style.display = 'flex';
     }
 
-    wrapper.addEventListener('mouseenter', () => {
-        clearTimeout(collapseTimeout);
-    });
-
+    wrapper.addEventListener('mouseenter', () => clearTimeout(collapseTimeout));
     wrapper.addEventListener('mouseleave', () => {
-        collapseTimeout = setTimeout(() => {
-            collapseUI();
-        }, 1000);
+        collapseTimeout = setTimeout(collapseUI, 1000);
     });
 
     collapsedCircle.addEventListener('click', () => {
-        if (wrapper.classList.contains('expanded')) {
-            collapseUI();
-        } else {
-            expandUI();
-        }
+        wrapper.classList.contains('expanded') ? collapseUI() : expandUI();
     });
 
     document.addEventListener('click', (e) => {
         const target = e.target;
-        const allowIds = ['elch-inline-save', 'elch-inline-reset'];
-
-        if (!wrapper.contains(target)) {
-            collapseUI();
-            clearTimeout(collapseTimeout);
-        } else if (
-            allowIds.includes(target.id)
-        ) {
-            // allow interaction
-        } else {
-            clearTimeout(collapseTimeout);
-        }
+        if (!wrapper.contains(target)) collapseUI();
+        else if (!['elch-inline-save', 'elch-inline-reset'].includes(target.id)) clearTimeout(collapseTimeout);
     });
 
     function extractMarkdownLink(str) {
@@ -98,6 +79,85 @@
         } catch {
             GM_setClipboard(val);
         }
+    }
+
+    function determineType(key, val) {
+        const lowerKey = key.toLowerCase();
+        if (val === 'true' || val === 'false') return 'boolean';
+        if (key === 'Download file' || key === 'Download description') return 'fetchText';
+        if (extractMarkdownLink(val)) return 'markdown';
+        if (['photos', 'floorplans', 'listing errors', 'hidden listings'].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
+        if (val.startsWith('http') && /\.(zip|pdf|docx?|xlsx?|jpg|png|jpeg|gif)/i.test(val)) return 'downloadLink';
+        if (val.startsWith('http')) return 'copyText';
+        return 'text';
+    }
+
+    function renderRow(key, val) {
+        const type = determineType(key, val);
+        const row = document.createElement('div');
+        row.className = 'elch-entry';
+
+        let html = '';
+
+        switch (type) {
+            case 'boolean':
+                html = `<div>${key}</div><div><span>${val}</span></div>`;
+                break;
+
+            case 'fetchText':
+                html = `<div>${key}</div><div><span class="copy fetch-txt material-icons" style="font-size:14px;vertical-align:middle;" data-url="${val}">content_copy</span></div>`;
+                break;
+
+            case 'markdown': {
+                const md = extractMarkdownLink(val);
+                html = `<div>${md.label}</div><div><a href="${md.url}" target="_blank"><button class="elch-download">Download</button></a></div>`;
+                break;
+            }
+
+            case 'externalOpen':
+                html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Open</button></a></div>`;
+                break;
+
+            case 'downloadLink':
+                html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Download</button></a></div>`;
+                break;
+
+            case 'copyText':
+                html = `<div>${key}</div><div><span>${val}</span> <span class="copy material-icons" style="font-size:14px;vertical-align:middle;">content_copy</span></div>`;
+                break;
+
+            case 'text':
+            default:
+                html = `<div>${key}</div><div><span>${val}</span></div>`;
+                break;
+        }
+
+        row.innerHTML = html;
+
+        const copyBtn = row.querySelector('.copy');
+        if (copyBtn && !copyBtn.classList.contains('fetch-txt')) {
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                copyToClipboard(val);
+                setTimeout(collapseImmediately, 0);
+            });
+        }
+
+        const fetchBtn = row.querySelector('.fetch-txt');
+        if (fetchBtn) {
+            fetchBtn.onclick = async () => {
+                try {
+                    const res = await fetch(val);
+                    const text = await res.text();
+                    copyToClipboard(text);
+                    collapseImmediately();
+                } catch {
+                    alert('Failed to fetch or copy .txt file.');
+                }
+            };
+        }
+
+        return row;
     }
 
     function showSections() {
@@ -121,23 +181,14 @@
 
         const importSection = document.createElement('details');
         importSection.className = 'elch-section';
-        const importSummary = document.createElement('summary');
-        importSummary.textContent = '0. Import code';
-        importSection.appendChild(importSummary);
-        const importBox = document.createElement('div');
-        importBox.className = 'elch-entry';
-        importBox.style.flexDirection = 'column';
-
-        const currentJsonString = Object.keys(jsonData).length > 0 ? JSON.stringify(jsonData, null, 2) : '';
-        importBox.innerHTML = `
-            <textarea id="elch-inline-input" style="width:100%;height:100px;font-family:monospace;font-size:12px;background:#111;color:#eee;border:1px solid #444;">${currentJsonString}</textarea><br>
-            <button id="elch-inline-save">Load</button>
-            <button id="elch-inline-reset">Reset</button>
-        `;
-        importSection.appendChild(importBox);
+        importSection.innerHTML = `
+            <summary>0. Import code</summary>
+            <div class="elch-entry" style="flex-direction: column;">
+                <textarea id="elch-inline-input" style="width:100%;height:100px;font-family:monospace;font-size:12px;background:#111;color:#eee;border:1px solid #444;">${Object.keys(jsonData).length > 0 ? JSON.stringify(jsonData, null, 2) : ''}</textarea><br>
+                <button id="elch-inline-save">Load</button>
+                <button id="elch-inline-reset">Reset</button>
+            </div>`;
         sectionBox.appendChild(importSection);
-
-        const allSections = [importSection];
 
         document.getElementById('elch-inline-save').onclick = () => {
             try {
@@ -146,7 +197,7 @@
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(jsonData));
                 localStorage.setItem(LAST_USED_KEY, Date.now());
                 showSections();
-            } catch (e) {
+            } catch {
                 alert('Invalid JSON');
             }
         };
@@ -170,66 +221,19 @@
 
             const entries = jsonData[section];
             for (const key in entries) {
-                const row = document.createElement('div');
-                row.className = 'elch-entry';
-                const rawVal = entries[key];
-                const val = String(rawVal);
-                let content = '';
-
-                const isCopyOnly = (key === 'Visite virtuelle' || key === 'URL du deal Pipedrive');
-                const isTxtCopyOnly = key === 'Download description';
-                const markdown = extractMarkdownLink(val);
-
-                if (val === 'true' || val === 'false') {
-                    content = `<div>${key}</div><div><span>${val}</span></div>`;
-                } else if (isTxtCopyOnly) {
-                    content = `<div>${key}</div><div><span class="copy fetch-txt material-icons" style="font-size: 14px; vertical-align: middle;" data-url="${val}">content_copy</span></div>`;
-                } else if (markdown) {
-                    content = `<div>${markdown.label}</div><div><a href="${markdown.url}" target="_blank"><button class="elch-download">Download</button></a></div>`;
-                } else if (val.startsWith('http') && !isCopyOnly && /\.(zip|pdf|docx?|xlsx?|jpg|png|jpeg|gif)/i.test(val)) {
-                    content = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Download</button></a></div>`;
-                } else {
-                    content = `<div>${key}</div><div><span>${val}</span> <span class="copy material-icons" style="font-size: 14px; vertical-align: middle;">content_copy</span></div>`;
-                }
-
-                row.innerHTML = content;
-
-                const copyBtn = row.querySelector('.copy');
-                if (copyBtn && !copyBtn.classList.contains('fetch-txt')) {
-                    copyBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        copyToClipboard(val);
-                        setTimeout(collapseImmediately, 0);
-                    });
-                }
-
-                const fetchIcon = row.querySelector('.fetch-txt');
-                if (fetchIcon) {
-                    fetchIcon.onclick = async () => {
-                        try {
-                            const res = await fetch(val);
-                            const text = await res.text();
-                            copyToClipboard(text);
-                            collapseImmediately();
-                        } catch (err) {
-                            alert('Failed to fetch or copy .txt file.');
-                        }
-                    };
-                }
-
+                const row = renderRow(key, String(entries[key]));
                 details.appendChild(row);
             }
 
-            allSections.push(details);
             sectionBox.appendChild(details);
         }
 
         const detailNodes = sectionBox.querySelectorAll('details');
-        detailNodes.forEach((detailsEl) => {
-            const summary = detailsEl.querySelector('summary');
-            summary?.addEventListener('click', () => {
-                detailNodes.forEach((other) => {
-                    if (other !== detailsEl) other.removeAttribute('open');
+        detailNodes.forEach((d) => {
+            const s = d.querySelector('summary');
+            s?.addEventListener('click', () => {
+                detailNodes.forEach((o) => {
+                    if (o !== d) o.removeAttribute('open');
                 });
             });
         });
@@ -238,16 +242,15 @@
     const saved = localStorage.getItem(STORAGE_KEY);
     const lastUsed = parseInt(localStorage.getItem(LAST_USED_KEY), 10);
     const now = Date.now();
-    const oneHour = 60 * 60 * 1000;
-
-    if (saved && (!lastUsed || now - lastUsed <= oneHour)) {
+    if (saved && (!lastUsed || now - lastUsed <= 3600000)) {
         try {
             jsonData = JSON.parse(saved);
             localStorage.setItem(LAST_USED_KEY, now);
-        } catch (e) {
+        } catch {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem(LAST_USED_KEY);
         }
     }
+
     showSections();
 })();
