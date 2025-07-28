@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.0
+// @version      4.1
 // @description  Floating JSON UI for structured listing data
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -90,6 +90,14 @@
     function collapseImmediately() {
         collapseUI();
         clearTimeout(collapseTimeout);
+    }
+
+    function copyToClipboard(val) {
+        try {
+            navigator.clipboard.writeText(val).catch(() => GM_setClipboard(val));
+        } catch {
+            GM_setClipboard(val);
+        }
     }
 
     function showSections() {
@@ -190,7 +198,7 @@
                 if (copyBtn && !copyBtn.classList.contains('fetch-txt')) {
                     copyBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        GM_setClipboard(val);
+                        copyToClipboard(val);
                         setTimeout(collapseImmediately, 0);
                     });
                 }
@@ -201,7 +209,7 @@
                         try {
                             const res = await fetch(val);
                             const text = await res.text();
-                            GM_setClipboard(text);
+                            copyToClipboard(text);
                             collapseImmediately();
                         } catch (err) {
                             alert('Failed to fetch or copy .txt file.');
