@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.3
-// @description  Floating JSON UI for structured listing data (refactored types)
+// @version      4.4
+// @description  Floating JSON UI with import/export via URL (#data=base64)
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -14,6 +14,21 @@
     const LAST_USED_KEY = 'easy_listing_last_used';
     let jsonData = {};
     let collapseTimeout = null;
+
+    // Base64 JSON preload from #data=...
+    if (location.hash.startsWith('#data=')) {
+        try {
+            const encoded = location.hash.slice(6);
+            const decoded = atob(decodeURIComponent(encoded));
+            const parsed = JSON.parse(decoded);
+            jsonData = parsed;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+            localStorage.setItem(LAST_USED_KEY, Date.now());
+            history.replaceState(null, '', location.pathname); // clean URL
+        } catch {
+            alert('Failed to load shared listing data from URL.');
+        }
+    }
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -242,7 +257,7 @@
     const saved = localStorage.getItem(STORAGE_KEY);
     const lastUsed = parseInt(localStorage.getItem(LAST_USED_KEY), 10);
     const now = Date.now();
-    if (saved && (!lastUsed || now - lastUsed <= 3600000)) {
+    if (!jsonData && saved && (!lastUsed || now - lastUsed <= 3600000)) {
         try {
             jsonData = JSON.parse(saved);
             localStorage.setItem(LAST_USED_KEY, now);
