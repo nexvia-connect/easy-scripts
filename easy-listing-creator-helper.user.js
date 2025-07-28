@@ -23,22 +23,25 @@
 
     // Redirect to clean hash route
     if (location.hash.includes('data=')) {
-        try {
-            const params = new URLSearchParams(location.hash.split('?')[1]);
-            const encoded = params.get('data');
-            if (encoded) {
-                const decoded = decodeBase64Utf8(encoded);
-                const parsed = JSON.parse(decoded);
-                jsonData = parsed;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-                localStorage.setItem(LAST_USED_KEY, Date.now());
-                location.href = 'https://nexvia1832.easy-serveur53.com/#/';
+    try {
+        const params = new URLSearchParams(location.hash.split('?')[1]);
+        const encoded = params.get('data');
+        if (encoded) {
+            const decoded = decodeBase64Utf8(encoded);
+            const parsed = JSON.parse(decoded);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+            localStorage.setItem(LAST_USED_KEY, Date.now());
+            const targetHash = '#/';
+            if (location.hash !== targetHash) {
+                location.hash = targetHash;
                 return;
             }
-        } catch {
-            alert('Failed to load shared listing data from URL.');
         }
+    } catch {
+        alert('Failed to load shared listing data from URL.');
     }
+}
+
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
