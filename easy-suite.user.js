@@ -126,7 +126,7 @@
     });
 
     const forceUpdateBtn = document.createElement('button');
-    forceUpdateBtn.textContent = 'Force update';
+    forceUpdateBtn.textContent = 'Update';
     forceUpdateBtn.addEventListener('click', () => {
       window.open('https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/easy-suite.user.js', '_blank');
     });
