@@ -21,7 +21,7 @@
             const params = new URLSearchParams(location.hash.split('?')[1]);
             const encoded = params.get('data');
             if (encoded) {
-                const decoded = atob(decodeURIComponent(encoded));
+                const decoded = decodeURIComponent(escape(atob(encoded)));
                 const parsed = JSON.parse(decoded);
                 jsonData = parsed;
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
