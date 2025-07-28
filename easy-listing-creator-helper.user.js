@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.5
+// @version      4.6
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64)
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -26,8 +26,7 @@
                 jsonData = parsed;
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
                 localStorage.setItem(LAST_USED_KEY, Date.now());
-                const cleanHash = location.hash.split('?')[0];
-                history.replaceState(null, '', `${location.pathname}${cleanHash}`);
+                location.href = 'https://nexvia1832.easy-serveur53.com/#/';
             }
         } catch {
             alert('Failed to load shared listing data from URL.');
