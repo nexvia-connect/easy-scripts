@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.4
-// @description  Floating JSON UI with import/export via URL (#data=base64)
+// @version      4.5
+// @description  Floating JSON UI with import/export via URL (#/route?data=base64)
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -15,16 +15,20 @@
     let jsonData = {};
     let collapseTimeout = null;
 
-    // Base64 JSON preload from #data=...
-    if (location.hash.startsWith('#data=')) {
+    // Base64 JSON preload from hash with ?data=
+    if (location.hash.includes('data=')) {
         try {
-            const encoded = location.hash.slice(6);
-            const decoded = atob(decodeURIComponent(encoded));
-            const parsed = JSON.parse(decoded);
-            jsonData = parsed;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-            localStorage.setItem(LAST_USED_KEY, Date.now());
-            history.replaceState(null, '', location.pathname); // clean URL
+            const params = new URLSearchParams(location.hash.split('?')[1]);
+            const encoded = params.get('data');
+            if (encoded) {
+                const decoded = atob(decodeURIComponent(encoded));
+                const parsed = JSON.parse(decoded);
+                jsonData = parsed;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+                localStorage.setItem(LAST_USED_KEY, Date.now());
+                const cleanHash = location.hash.split('?')[0];
+                history.replaceState(null, '', `${location.pathname}${cleanHash}`);
+            }
         } catch {
             alert('Failed to load shared listing data from URL.');
         }
