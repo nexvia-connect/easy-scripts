@@ -2,7 +2,7 @@
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
 // @version      4.6
-// @description  Floating JSON UI with import/export via URL (#/listing-helper?data=base64), UTF-8 safe
+// @description  Floating JSON UI with import/export via URL (#/listing-helper?data=base64), then auto-redirects to #/
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -15,33 +15,31 @@
     let jsonData = {};
     let collapseTimeout = null;
 
-    function decodeBase64Utf8(base64) {
-        return decodeURIComponent(Array.prototype.map.call(atob(base64), c =>
-            '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-        ).join(''));
+    function decodeBase64Utf8(encoded) {
+        try {
+            return decodeURIComponent(escape(atob(encoded)));
+        } catch {
+            return atob(decodeURIComponent(encoded));
+        }
     }
 
-    // Redirect to clean hash route
+    // Base64 JSON preload from hash with ?data=
     if (location.hash.includes('data=')) {
-    try {
-        const params = new URLSearchParams(location.hash.split('?')[1]);
-        const encoded = params.get('data');
-        if (encoded) {
-            const decoded = decodeBase64Utf8(encoded);
-            const parsed = JSON.parse(decoded);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-            localStorage.setItem(LAST_USED_KEY, Date.now());
-            const targetHash = '#/';
-            if (location.hash !== targetHash) {
-                location.hash = targetHash;
+        try {
+            const params = new URLSearchParams(location.hash.split('?')[1]);
+            const encoded = params.get('data');
+            if (encoded) {
+                const decoded = decodeBase64Utf8(encoded);
+                const parsed = JSON.parse(decoded);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+                localStorage.setItem(LAST_USED_KEY, Date.now());
+                location.replace('https://nexvia1832.easy-serveur53.com/#/');
                 return;
             }
+        } catch {
+            alert('Failed to load shared listing data from URL.');
         }
-    } catch {
-        alert('Failed to load shared listing data from URL.');
     }
-}
-
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
