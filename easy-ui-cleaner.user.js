@@ -144,6 +144,7 @@
         const popup = document.createElement('div');
         popup.className = 'popup-editor';
         popup.innerHTML = `
+            <div style="margin-bottom: 6px; font-size: 13px;">Hidden elements:</div>
             <textarea>${Array.from(hiddenInputs).join('\n')}</textarea>
             <button id="save-editor">Save</button>
             <button id="close-editor">Close</button>
@@ -172,7 +173,9 @@
     ui.innerHTML = `
         <h3>UI cleaner</h3>
         <button id="toggle-edit">Show/Hide elements</button>
-        <button id="edit-hidden" style="display:none"><span class="material-icons" style="font-size:16px; vertical-align:middle; margin-right:4px;">settings</span>Options</button>
+        <button id="edit-hidden" style="display:none">
+            <span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">settings</span>Options
+        </button>
     `;
     document.body.appendChild(ui);
 
@@ -193,7 +196,7 @@
 
     const iconLink = document.createElement('link');
     iconLink.rel = 'stylesheet';
-    iconLink.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
+    iconLink.href = 'https://fonts.googleapis.com/icon?family=Material+Icons+Outlined';
     document.head.appendChild(iconLink);
 
     const style = document.createElement('style');
