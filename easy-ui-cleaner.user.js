@@ -144,7 +144,7 @@
         const popup = document.createElement('div');
         popup.className = 'popup-editor';
         popup.innerHTML = `
-            <div style="margin-bottom: 6px; font-size: 13px;">Hidden elements:</div>
+            <div style="margin-bottom: 6px; font-size: 13px; color: #fff;">Hidden elements:</div>
             <textarea>${Array.from(hiddenInputs).join('\n')}</textarea>
             <button id="save-editor">Save</button>
             <button id="close-editor">Close</button>
