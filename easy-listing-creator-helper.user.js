@@ -2,7 +2,7 @@
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
 // @version      4.6
-// @description  Floating JSON UI with import/export via URL (#/route?data=base64) and redirect after preload
+// @description  Floating JSON UI with import/export via URL (#/route?data=base64)
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -15,6 +15,25 @@
     let jsonData = {};
     let collapseTimeout = null;
 
+    // Base64 JSON preload from hash with ?data=...
+    if (location.hash.includes('data=')) {
+        try {
+            const params = new URLSearchParams(location.hash.split('?')[1]);
+            const encoded = params.get('data');
+            if (encoded) {
+                const decoded = atob(decodeURIComponent(encoded));
+                const parsed = JSON.parse(decoded);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+                localStorage.setItem(LAST_USED_KEY, Date.now());
+                setTimeout(() => {
+                    location.replace(location.origin + location.pathname + '#/');
+                }, 10);
+            }
+        } catch {
+            alert('Failed to load shared listing data from URL.');
+        }
+    }
+
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://nexvia-connect.github.io/easy-scripts/styles/creator-helper-styles.css';
@@ -24,24 +43,6 @@
     iconLink.rel = 'stylesheet';
     iconLink.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
     document.head.appendChild(iconLink);
-
-    // Check and parse preload from hash, then redirect
-    if (location.hash.includes('data=')) {
-        try {
-            const params = new URLSearchParams(location.hash.split('?')[1]);
-            const encoded = params.get('data');
-            if (encoded) {
-                const decoded = decodeURIComponent(atob(encoded));
-                const parsed = JSON.parse(decoded);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-                localStorage.setItem(LAST_USED_KEY, Date.now());
-                location.href = 'https://nexvia1832.easy-serveur53.com/#/';
-                return;
-            }
-        } catch {
-            alert('Invalid preload data');
-        }
-    }
 
     const wrapper = document.createElement('div');
     wrapper.className = 'elch-wrapper';
@@ -81,6 +82,103 @@
         else if (!['elch-inline-save', 'elch-inline-reset'].includes(target.id)) clearTimeout(collapseTimeout);
     });
 
+    function extractMarkdownLink(str) {
+        const match = str.match(/\[([^\]]+)]\(([^)]+)\)/);
+        return match ? { label: match[1], url: match[2] } : null;
+    }
+
+    function collapseImmediately() {
+        collapseUI();
+        clearTimeout(collapseTimeout);
+    }
+
+    function copyToClipboard(val) {
+        try {
+            navigator.clipboard.writeText(val).catch(() => GM_setClipboard(val));
+        } catch {
+            GM_setClipboard(val);
+        }
+    }
+
+    function determineType(key, val) {
+        const lowerKey = key.toLowerCase();
+        if (val === 'true' || val === 'false') return 'boolean';
+        if (key === 'Download file' || key === 'Download description') return 'fetchText';
+        if (extractMarkdownLink(val)) return 'markdown';
+        if (['photos', 'floorplans', 'listing errors', 'hidden listings'].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
+        if (val.startsWith('http') && /\.(zip|pdf|docx?|xlsx?|jpg|png|jpeg|gif)/i.test(val)) return 'downloadLink';
+        if (val.startsWith('http')) return 'copyText';
+        return 'text';
+    }
+
+    function renderRow(key, val) {
+        const type = determineType(key, val);
+        const row = document.createElement('div');
+        row.className = 'elch-entry';
+
+        let html = '';
+
+        switch (type) {
+            case 'boolean':
+                html = `<div>${key}</div><div><span>${val}</span></div>`;
+                break;
+
+            case 'fetchText':
+                html = `<div>${key}</div><div><span class="copy fetch-txt material-icons" style="font-size:14px;vertical-align:middle;" data-url="${val}">content_copy</span></div>`;
+                break;
+
+            case 'markdown': {
+                const md = extractMarkdownLink(val);
+                html = `<div>${md.label}</div><div><a href="${md.url}" target="_blank"><button class="elch-download">Download</button></a></div>`;
+                break;
+            }
+
+            case 'externalOpen':
+                html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Open</button></a></div>`;
+                break;
+
+            case 'downloadLink':
+                html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Download</button></a></div>`;
+                break;
+
+            case 'copyText':
+                html = `<div>${key}</div><div><span>${val}</span> <span class="copy material-icons" style="font-size:14px;vertical-align:middle;">content_copy</span></div>`;
+                break;
+
+            case 'text':
+            default:
+                html = `<div>${key}</div><div><span>${val}</span></div>`;
+                break;
+        }
+
+        row.innerHTML = html;
+
+        const copyBtn = row.querySelector('.copy');
+        if (copyBtn && !copyBtn.classList.contains('fetch-txt')) {
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                copyToClipboard(val);
+                setTimeout(collapseImmediately, 0);
+            });
+        }
+
+        const fetchBtn = row.querySelector('.fetch-txt');
+        if (fetchBtn) {
+            fetchBtn.onclick = async () => {
+                try {
+                    const res = await fetch(val);
+                    const text = await res.text();
+                    copyToClipboard(text);
+                    collapseImmediately();
+                } catch {
+                    alert('Failed to fetch or copy .txt file.');
+                }
+            };
+        }
+
+        return row;
+    }
+
     function showSections() {
         sectionBox.innerHTML = '';
 
@@ -90,7 +188,13 @@
             const titleText = document.createElement('span');
             titleText.textContent = jsonData.title;
 
+            const pipeLink = document.createElement('a');
+            pipeLink.href = jsonData['1. Informations complémentaires']?.['URL du deal Pipedrive'] || '#';
+            pipeLink.target = '_blank';
+            pipeLink.innerHTML = `<img src="https://nexvia-connect.github.io/easy-scripts/media/pipedrive-favicon.png" class="elch-pipedrive-icon" />`;
+
             titleDiv.appendChild(titleText);
+            titleDiv.appendChild(pipeLink);
             sectionBox.appendChild(titleDiv);
         }
 
@@ -123,18 +227,49 @@
             jsonData = {};
             showSections();
         };
+
+        if (!jsonData || Object.keys(jsonData).length === 0) return;
+
+        for (const section in jsonData) {
+            if (section === 'title') continue;
+            const details = document.createElement('details');
+            details.className = 'elch-section';
+            const summary = document.createElement('summary');
+            summary.textContent = section;
+            details.appendChild(summary);
+
+            const entries = jsonData[section];
+            for (const key in entries) {
+                const row = renderRow(key, String(entries[key]));
+                details.appendChild(row);
+            }
+
+            sectionBox.appendChild(details);
+        }
+
+        const detailNodes = sectionBox.querySelectorAll('details');
+        detailNodes.forEach((d) => {
+            const s = d.querySelector('summary');
+            s?.addEventListener('click', () => {
+                detailNodes.forEach((o) => {
+                    if (o !== d) o.removeAttribute('open');
+                });
+            });
+        });
     }
 
     const saved = localStorage.getItem(STORAGE_KEY);
     const lastUsed = parseInt(localStorage.getItem(LAST_USED_KEY), 10);
     const now = Date.now();
-    if (saved && (!lastUsed || now - lastUsed <= 3600000)) {
-        try {
-            jsonData = JSON.parse(saved);
-            localStorage.setItem(LAST_USED_KEY, now);
-        } catch {
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem(LAST_USED_KEY);
+    if (!jsonData || Object.keys(jsonData).length === 0) {
+        if (saved && (!lastUsed || now - lastUsed <= 3600000)) {
+            try {
+                jsonData = JSON.parse(saved);
+                localStorage.setItem(LAST_USED_KEY, now);
+            } catch {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(LAST_USED_KEY);
+            }
         }
     }
 
