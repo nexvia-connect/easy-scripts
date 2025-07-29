@@ -197,7 +197,7 @@ textarea#elch-inline-input {
 
 .elch-title-controls {
   position: absolute;
-  top: 6px;
+  top: 2px;
   display: flex;
   align-items: center;
   color: white;
