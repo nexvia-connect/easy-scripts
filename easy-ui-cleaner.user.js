@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Easy UI cleaner (v3.20 Top-right, icons)
+// @name         Easy UI cleaner (v3.21 Top-right, icon class)
 // @namespace    http://tampermonkey.net/
-// @version      3.20
+// @version      3.21
 // @description  Toggle visibility of UI elements and save preferences with precise full path control and multi-toggle per block
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -134,7 +134,7 @@
     function confirmEditState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(hiddenInputs)));
         editMode = false;
-        document.getElementById('toggle-edit').innerHTML = '<span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">contrast_circle</span>Show/Hide elements';
+        document.getElementById('toggle-edit').innerHTML = '<span class="material-icons-outlined button-icon">contrast_circle</span>Show/Hide elements';
         removeEditButtons();
         applyHiddenStates();
     }
@@ -172,10 +172,10 @@
     ui.innerHTML = `
         <h3>UI cleaner</h3>
         <button id="toggle-edit">
-            <span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">contrast_circle</span>Show/Hide elements
+            <span class="material-icons-outlined button-icon">contrast_circle</span>Show/Hide elements
         </button>
         <button id="edit-hidden">
-            <span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">settings</span>Options
+            <span class="material-icons-outlined button-icon">settings</span>Options
         </button>
     `;
     document.body.appendChild(ui);
@@ -183,8 +183,8 @@
     document.getElementById('toggle-edit').addEventListener('click', () => {
         editMode = !editMode;
         document.getElementById('toggle-edit').innerHTML = editMode
-            ? '<span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">check_circle</span>Confirm'
-            : '<span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">contrast_circle</span>Show/Hide elements';
+            ? '<span class="material-icons-outlined button-icon">check_circle</span>Confirm'
+            : '<span class="material-icons-outlined button-icon">visibility</span>Show/Hide elements';
         if (editMode) addEditButtons();
         else confirmEditState();
         applyHiddenStates();
