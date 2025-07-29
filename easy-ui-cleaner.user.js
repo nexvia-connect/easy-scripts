@@ -134,7 +134,7 @@
     function confirmEditState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(hiddenInputs)));
         editMode = false;
-        document.getElementById('toggle-edit').innerHTML = '<span class="material-icons-outlined button-icon">contrast_circle</span>Show/Hide elements';
+        document.getElementById('toggle-edit').innerHTML = '<span class="material-icons-outlined button-icon">visibility</span>Show/Hide elements';
         removeEditButtons();
         applyHiddenStates();
     }
