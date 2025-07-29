@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.15
+// @version      4.16
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -273,9 +273,26 @@
             if (btn) {
                 btn.click();
                 setTimeout(() => {
-                    const input = document.querySelector('input[name="adresse_search"]');
                     const addr = jsonData['3. Coordonnées']?.['Adresse'] || '';
-                    if (input && addr) input.value = addr;
+                    const [_, streetNumber, streetName, postalCode, ...communeParts] = addr.match(/^(\S+)\s+(.*?)\s+L-(\d{4})\s+(.*)$/) || [];
+                    const communeName = communeParts?.join(' ') || '';
+
+                    const setVal = (name, val) => {
+                        const el = document.querySelector(`input[name="${name}"]`);
+                        if (el && val) el.value = val;
+                    };
+
+                    setVal('adresse_search', addr);
+                    setVal('street_number', streetNumber);
+                    setVal('route', streetName);
+                    setVal('postal_code', postalCode);
+                    setVal('locality', communeName);
+
+                    const countrySelect = document.querySelector('mat-select[name="pay_id"]');
+                    if (countrySelect) {
+                        const span = countrySelect.querySelector('span.mat-select-value-text');
+                        if (span) span.textContent = 'Luxembourg';
+                    }
                 }, 1000);
             } else {
                 setTimeout(tryClick, 500);
