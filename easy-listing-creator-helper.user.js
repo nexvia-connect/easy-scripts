@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.8
-// @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
+// @version      4.6
+// @description  Floating JSON UI with import/export via URL (#/route?data=base64) and redirect auto-load
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -13,27 +13,23 @@
     const STORAGE_KEY = 'easy_listing_data';
     const LAST_USED_KEY = 'easy_listing_last_used';
     let jsonData = {};
-    let collapseTimeout = null;
 
-    let redirectedViaHash = false;
-
-    // Base64 JSON preload from hash with ?data=...
-    if (location.hash.includes('data=')) {
+    function parseBase64Json(data) {
         try {
-            const params = new URLSearchParams(location.hash.split('?')[1]);
-            const encoded = params.get('data');
-            if (encoded) {
-                const decoded = decodeURIComponent(escape(atob(encoded)));
-                const parsed = JSON.parse(decoded);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-                localStorage.setItem(LAST_USED_KEY, Date.now());
-                redirectedViaHash = true;
-                setTimeout(() => {
-                    location.replace(location.origin + location.pathname + '#/');
-                }, 10);
-            }
+            const decoded = atob(decodeURIComponent(data));
+            return JSON.parse(decoded);
         } catch {
-            alert('Failed to load shared listing data from URL.');
+            return null;
+        }
+    }
+
+    if (location.href.includes('#/listing-helper?data=')) {
+        const encoded = new URLSearchParams(location.hash.split('?')[1]).get('data');
+        const parsed = parseBase64Json(encoded);
+        if (parsed) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+            localStorage.setItem(LAST_USED_KEY, Date.now());
+            location.replace('https://nexvia1832.easy-serveur53.com/#/');
         }
     }
 
@@ -60,19 +56,19 @@
     sectionBox.className = 'elch-sections';
     wrapper.appendChild(sectionBox);
 
-    function expandUI() {
-        wrapper.classList.add('expanded');
-        collapsedCircle.style.display = 'none';
-    }
-
     function collapseUI() {
         wrapper.classList.remove('expanded');
         collapsedCircle.style.display = 'flex';
     }
 
-    wrapper.addEventListener('mouseenter', () => clearTimeout(collapseTimeout));
+    function expandUI() {
+        wrapper.classList.add('expanded');
+        collapsedCircle.style.display = 'none';
+    }
+
+    wrapper.addEventListener('mouseenter', () => clearTimeout(wrapper._collapseTimeout));
     wrapper.addEventListener('mouseleave', () => {
-        collapseTimeout = setTimeout(collapseUI, 1000);
+        wrapper._collapseTimeout = setTimeout(collapseUI, 1000);
     });
 
     collapsedCircle.addEventListener('click', () => {
@@ -80,20 +76,8 @@
     });
 
     document.addEventListener('click', (e) => {
-        const target = e.target;
-        if (!wrapper.contains(target)) collapseUI();
-        else if (!['elch-inline-save', 'elch-inline-reset'].includes(target.id)) clearTimeout(collapseTimeout);
+        if (!wrapper.contains(e.target)) collapseUI();
     });
-
-    function extractMarkdownLink(str) {
-        const match = str.match(/\[([^\]]+)]\(([^)]+)\)/);
-        return match ? { label: match[1], url: match[2] } : null;
-    }
-
-    function collapseImmediately() {
-        collapseUI();
-        clearTimeout(collapseTimeout);
-    }
 
     function copyToClipboard(val) {
         try {
@@ -103,19 +87,15 @@
         }
     }
 
+    function extractMarkdownLink(str) {
+        const match = str.match(/\[([^\]]+)]\(([^)]+)\)/);
+        return match ? { label: match[1], url: match[2] } : null;
+    }
+
     function determineType(key, val) {
-        const lowerKey = key.toLowerCase();
         if (val === 'true' || val === 'false') return 'boolean';
-        if (key === 'Download file' || key === 'Download description') return 'fetchText';
-        if (extractMarkdownLink(val)) return 'markdown';
-        if ([
-            'photos',
-            'floorplans',
-            'listing errors',
-            'hidden listings'
-        ].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
-        if (val.startsWith('http') && /\.(zip|pdf|docx?|xlsx?|jpg|png|jpeg|gif)/i.test(val)) return 'downloadLink';
-        if (val.startsWith('http')) return 'copyText';
+        if (val.startsWith('http') && val.match(/\.(zip|pdf|jpg|png)/i)) return 'downloadLink';
+        if (val.startsWith('http')) return 'link';
         return 'text';
     }
 
@@ -124,121 +104,45 @@
         const row = document.createElement('div');
         row.className = 'elch-entry';
 
-        let html = '';
+        const left = document.createElement('div');
+        left.textContent = key;
+        const right = document.createElement('div');
 
-        switch (type) {
-            case 'boolean':
-                html = `<div>${key}</div><div><span>${val}</span></div>`;
-                break;
-
-            case 'fetchText':
-                html = `<div>${key}</div><div><span class="copy fetch-txt material-icons" style="font-size:14px;vertical-align:middle;" data-url="${val}">content_copy</span></div>`;
-                break;
-
-            case 'markdown': {
-                const md = extractMarkdownLink(val);
-                html = `<div>${md.label}</div><div><a href="${md.url}" target="_blank"><button class="elch-download">Download</button></a></div>`;
-                break;
-            }
-
-            case 'externalOpen':
-            case 'downloadLink':
-                html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Download</button></a></div>`;
-                break;
-
-            case 'copyText':
-                html = `<div>${key}</div><div><span>${val}</span> <span class="copy material-icons" style="font-size:14px;vertical-align:middle;">content_copy</span></div>`;
-                break;
-
-            case 'text':
-            default:
-                html = `<div>${key}</div><div><span>${val}</span></div>`;
-                break;
+        if (type === 'downloadLink' || type === 'link') {
+            const a = document.createElement('a');
+            a.href = val;
+            a.target = '_blank';
+            a.textContent = 'Open';
+            right.appendChild(a);
+        } else {
+            const span = document.createElement('span');
+            span.textContent = val;
+            right.appendChild(span);
         }
 
-        row.innerHTML = html;
+        const icon = document.createElement('span');
+        icon.className = 'copy material-icons';
+        icon.style.fontSize = '14px';
+        icon.style.verticalAlign = 'middle';
+        icon.textContent = 'content_copy';
+        icon.onclick = () => copyToClipboard(val);
+        right.appendChild(icon);
 
-        const copyBtn = row.querySelector('.copy');
-        if (copyBtn && !copyBtn.classList.contains('fetch-txt')) {
-            copyBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                copyToClipboard(val);
-                setTimeout(collapseImmediately, 0);
-            });
-        }
-
-        const fetchBtn = row.querySelector('.fetch-txt');
-        if (fetchBtn) {
-            fetchBtn.onclick = async () => {
-                try {
-                    const res = await fetch(val);
-                    const text = await res.text();
-                    copyToClipboard(text);
-                    collapseImmediately();
-                } catch {
-                    alert('Failed to fetch or copy .txt file.');
-                }
-            };
-        }
-
+        row.appendChild(left);
+        row.appendChild(right);
         return row;
     }
 
     function showSections() {
         sectionBox.innerHTML = '';
-
-        if (jsonData.title) {
-            const titleDiv = document.createElement('div');
-            titleDiv.className = 'elch-title';
-            const titleText = document.createElement('span');
-            titleText.textContent = jsonData.title;
-
-            const pipeLink = document.createElement('a');
-            pipeLink.href = jsonData['1. Informations complémentaires']?.['URL du deal Pipedrive'] || '#';
-            pipeLink.target = '_blank';
-            pipeLink.innerHTML = `<img src="https://nexvia-connect.github.io/easy-scripts/media/pipedrive-favicon.png" class="elch-pipedrive-icon" />`;
-
-            titleDiv.appendChild(titleText);
-            titleDiv.appendChild(pipeLink);
-            sectionBox.appendChild(titleDiv);
-        }
-
-        const importSection = document.createElement('details');
-        importSection.className = 'elch-section';
-        importSection.innerHTML = `
-            <summary>0. Import code</summary>
-            <div class="elch-entry" style="flex-direction: column;">
-                <textarea id="elch-inline-input" style="width:100%;height:100px;font-family:monospace;font-size:12px;background:#111;color:#eee;border:1px solid #444;">${Object.keys(jsonData).length > 0 ? JSON.stringify(jsonData, null, 2) : ''}</textarea><br>
-                <button id="elch-inline-save">Load</button>
-                <button id="elch-inline-reset">Reset</button>
-            </div>`;
-        sectionBox.appendChild(importSection);
-
-        document.getElementById('elch-inline-save').onclick = () => {
-            try {
-                const txt = document.getElementById('elch-inline-input').value;
-                jsonData = JSON.parse(txt);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(jsonData));
-                localStorage.setItem(LAST_USED_KEY, Date.now());
-                showSections();
-            } catch {
-                alert('Invalid JSON');
-            }
-        };
-
-        document.getElementById('elch-inline-reset').onclick = () => {
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem(LAST_USED_KEY);
-            jsonData = {};
-            showSections();
-        };
-
         if (!jsonData || Object.keys(jsonData).length === 0) return;
 
         for (const section in jsonData) {
             if (section === 'title') continue;
             const details = document.createElement('details');
             details.className = 'elch-section';
+            details.setAttribute('open', '');
+
             const summary = document.createElement('summary');
             summary.textContent = section;
             details.appendChild(summary);
@@ -251,44 +155,30 @@
 
             sectionBox.appendChild(details);
         }
+    }
 
-        const detailNodes = sectionBox.querySelectorAll('details');
-        detailNodes.forEach((d) => {
-            const s = d.querySelector('summary');
-            s?.addEventListener('click', () => {
-                detailNodes.forEach((o) => {
-                    if (o !== d) o.removeAttribute('open');
-                });
-            });
-        });
+    function waitAndPrefillAddress() {
+        const interval = setInterval(() => {
+            const input = document.querySelector('input[name="adresse_search"]');
+            if (input && jsonData['3. Coordonnées']) {
+                const addrKey = Object.keys(jsonData['3. Coordonnées']).find(k => k.toLowerCase().includes('adresse'));
+                if (addrKey) {
+                    input.value = jsonData['3. Coordonnées'][addrKey];
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    clearInterval(interval);
+                }
+            }
+        }, 500);
     }
 
     const saved = localStorage.getItem(STORAGE_KEY);
-    const lastUsed = parseInt(localStorage.getItem(LAST_USED_KEY), 10);
-    const now = Date.now();
-    if (!jsonData || Object.keys(jsonData).length === 0) {
-        if (saved && (!lastUsed || now - lastUsed <= 3600000)) {
-            try {
-                jsonData = JSON.parse(saved);
-                localStorage.setItem(LAST_USED_KEY, now);
-            } catch {
-                localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem(LAST_USED_KEY);
-            }
+    if (saved) {
+        try {
+            jsonData = JSON.parse(saved);
+            showSections();
+            waitAndPrefillAddress();
+        } catch {
+            localStorage.removeItem(STORAGE_KEY);
         }
-    }
-
-    showSections();
-
-    if (redirectedViaHash) {
-        const tryClick = () => {
-            const btn = document.querySelector('a.btn-saisie.btn-lot.btn');
-            if (btn) {
-                btn.click();
-            } else {
-                setTimeout(tryClick, 500);
-            }
-        };
-        setTimeout(tryClick, 1500);
     }
 })();
