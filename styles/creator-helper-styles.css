@@ -220,11 +220,11 @@ textarea#elch-inline-input {
 }
 
 .elch-wrapper.left {
-  right: auto !important;
-  left: 20px !important;
+  right: auto;
+  left: 20px;
 }
 
 .elch-wrapper.right {
-  left: auto !important;
-  right: 20px !important;
+  left: auto;
+  right: 20px;
 }
