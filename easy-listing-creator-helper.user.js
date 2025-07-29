@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.16
+// @version      4.17
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -180,7 +180,7 @@
             titleText.textContent = jsonData.title;
 
             const pipeLink = document.createElement('a');
-            pipeLink.href = jsonData['1. Informations complémentaires']?.['URL du deal Pipedrive'] || '#';
+            pipeLink.href = jsonData['3. Coordonnées']?.['URL du deal Pipedrive'] || '#';
             pipeLink.target = '_blank';
             pipeLink.innerHTML = `<img src="https://nexvia-connect.github.io/easy-scripts/media/pipedrive-favicon.png" class="elch-pipedrive-icon" />`;
 
@@ -290,8 +290,16 @@
 
                     const countrySelect = document.querySelector('mat-select[name="pay_id"]');
                     if (countrySelect) {
-                        const span = countrySelect.querySelector('span.mat-select-value-text');
-                        if (span) span.textContent = 'Luxembourg';
+                        countrySelect.click();
+                        setTimeout(() => {
+                            const options = document.querySelectorAll('mat-option');
+                            for (const opt of options) {
+                                if (opt.textContent.trim() === 'Luxembourg') {
+                                    opt.click();
+                                    break;
+                                }
+                            }
+                        }, 300);
                     }
                 }, 1000);
             } else {
