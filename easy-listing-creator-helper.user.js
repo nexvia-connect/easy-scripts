@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.7
+// @version      4.8
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -15,6 +15,8 @@
     let jsonData = {};
     let collapseTimeout = null;
 
+    let redirectedViaHash = false;
+
     // Base64 JSON preload from hash with ?data=...
     if (location.hash.includes('data=')) {
         try {
@@ -25,17 +27,9 @@
                 const parsed = JSON.parse(decoded);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
                 localStorage.setItem(LAST_USED_KEY, Date.now());
+                redirectedViaHash = true;
                 setTimeout(() => {
                     location.replace(location.origin + location.pathname + '#/');
-                    const tryClick = () => {
-                        const btn = document.querySelector('a.btn-saisie.btn-lot.btn');
-                        if (btn) {
-                            btn.click();
-                        } else {
-                            setTimeout(tryClick, 500);
-                        }
-                    };
-                    setTimeout(tryClick, 1500);
                 }, 10);
             }
         } catch {
@@ -54,7 +48,7 @@
     document.head.appendChild(iconLink);
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'elch-wrapper';
+    wrapper.className = 'elch-wrapper expanded';
     document.body.appendChild(wrapper);
 
     const collapsedCircle = document.createElement('div');
@@ -285,4 +279,16 @@
     }
 
     showSections();
+
+    if (redirectedViaHash) {
+        const tryClick = () => {
+            const btn = document.querySelector('a.btn-saisie.btn-lot.btn');
+            if (btn) {
+                btn.click();
+            } else {
+                setTimeout(tryClick, 500);
+            }
+        };
+        setTimeout(tryClick, 1500);
+    }
 })();
