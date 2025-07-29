@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.10
+// @version      4.11
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -46,7 +46,7 @@
     document.head.appendChild(iconLink);
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'elch-wrapper expanded';
+    wrapper.className = 'elch-wrapper';
     document.body.appendChild(wrapper);
 
     const collapsedCircle = document.createElement('div');
@@ -232,7 +232,6 @@
                 details.appendChild(row);
             }
 
-            if (redirectedViaHash) details.setAttribute('open', '');
             sectionBox.appendChild(details);
         }
 
