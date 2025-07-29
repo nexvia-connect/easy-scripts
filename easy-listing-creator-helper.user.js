@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.24
-// @description  Floating JSON UI with import/export via URL (#/route?data=base64), collapses only on control clicks, and supports left/right screen alignment
+// @version      4.25
+// @description  Floating JSON UI with import/export via URL (#/route?data=base64), collapses only on control clicks, and supports left/right screen alignment with smooth animation
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -174,8 +174,12 @@
             iconLeft.title = 'Align left';
             iconLeft.onclick = (e) => {
                 e.stopPropagation();
-                wrapper.classList.remove('right');
-                wrapper.classList.add('left');
+                if (wrapper.classList.contains('right')) {
+                    wrapper.classList.remove('right');
+                    requestAnimationFrame(() => {
+                        wrapper.classList.add('left');
+                    });
+                }
                 wrapper.classList.add('expanded');
                 collapsedCircle.style.display = 'none';
             };
@@ -186,8 +190,12 @@
             iconRight.title = 'Align right';
             iconRight.onclick = (e) => {
                 e.stopPropagation();
-                wrapper.classList.remove('left');
-                wrapper.classList.add('right');
+                if (wrapper.classList.contains('left')) {
+                    wrapper.classList.remove('left');
+                    requestAnimationFrame(() => {
+                        wrapper.classList.add('right');
+                    });
+                }
                 wrapper.classList.add('expanded');
                 collapsedCircle.style.display = 'none';
             };
