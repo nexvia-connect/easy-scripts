@@ -67,9 +67,6 @@
                                 for (const opt of options) {
                                     if (opt.textContent.trim() === zoneName) {
                                         opt.click();
-                                        setTimeout(() => {
-                                            zoneSelect.click();
-                                        }, 200);
                                         break;
                                     }
                                 }
@@ -87,9 +84,6 @@
                             for (const opt of options) {
                                 if (opt.textContent.trim() === 'Luxembourg') {
                                     opt.click();
-                                    setTimeout(() => {
-                                        countrySelect.click();
-                                    }, 200);
                                     break;
                                 }
                             }
