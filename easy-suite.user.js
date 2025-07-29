@@ -53,7 +53,7 @@
     return { left: 20, top: 20 };
   }
 
-  function loadStyle() {
+  function loadStyle(callback) {
     fetch(STYLE_URL)
       .then(res => res.text())
       .then(css => {
@@ -71,6 +71,7 @@
           }
         `;
         document.head.appendChild(style);
+        callback?.();
       });
   }
 
@@ -206,30 +207,30 @@
   }
 
   function init() {
-    if (document.querySelector('.floating-ui')) return; // Prevent duplicate
+    if (document.querySelector('.floating-ui')) return;
 
-    loadStyle();
+    loadStyle(() => {
+      const faviconUrl = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/media/logo.png';
+      const oldFavicon = document.querySelector('link[rel="icon"]');
+      if (oldFavicon) oldFavicon.remove();
+      const newFavicon = document.createElement('link');
+      newFavicon.rel = 'icon';
+      newFavicon.href = faviconUrl;
+      document.head.appendChild(newFavicon);
 
-    const faviconUrl = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/media/logo.png';
-    const oldFavicon = document.querySelector('link[rel="icon"]');
-    if (oldFavicon) oldFavicon.remove();
-    const newFavicon = document.createElement('link');
-    newFavicon.rel = 'icon';
-    newFavicon.href = faviconUrl;
-    document.head.appendChild(newFavicon);
+      fetch(HELPER_URL)
+        .then(res => res.json())
+        .then(json => {
+          helperMap = typeof json === 'object' && json !== null ? json : {};
+          createPanel();
+        })
+        .catch(() => {
+          helperMap = {};
+          createPanel();
+        });
 
-    fetch(HELPER_URL)
-      .then(res => res.json())
-      .then(json => {
-        helperMap = typeof json === 'object' && json !== null ? json : {};
-        createPanel();
-      })
-      .catch(() => {
-        helperMap = {};
-        createPanel();
-      });
-
-    loadScripts();
+      loadScripts();
+    });
   }
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -238,7 +239,6 @@
     document.addEventListener('DOMContentLoaded', init);
   }
 
-  // SPA Support: trigger init() on route changes
   const originalPushState = history.pushState;
   const originalReplaceState = history.replaceState;
 
