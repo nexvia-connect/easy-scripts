@@ -4,6 +4,7 @@
 // @version      3.0
 // @description  Load and control Easy Suite scripts with UI toggle, collapsed mode, persistence, and SPA support
 // @match        https://nexvia1832.easy-serveur53.com/*
+// @include      https://nexvia1832.easy-serveur53.com/*
 // @grant        none
 // @connect      raw.githubusercontent.com
 // ==/UserScript==
