@@ -37,35 +37,34 @@
 }
 
 .floating-ui-cleaner {
-    position: fixed;    
+    position: fixed;
     top: 200px;
     right: 50px;
     background: #000;
-    padding: 0;
+    padding: 12px;
     border-radius: 12px;
     border: 1px solid #555;
     font-family: 'Open Sans', sans-serif;
     z-index: 9999;
     width: 200px;
     box-sizing: border-box;
-    padding: 12px;
-  opacity: 0.3;
-  transition: opacity 0.3s ease;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
 }
 
 .floating-ui-cleaner:hover {
-  opacity: 1;
+    opacity: 1;
 }
 
 .floating-ui-cleaner h3 {
-  margin: 0 0 6px 0;
-  color: white;
-  font-size: 14px;
-  border-bottom: 1px solid #444;
-  padding-bottom: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+    margin: 0 0 6px 0;
+    color: white;
+    font-size: 14px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .floating-ui-cleaner .easy-suite-body {
@@ -86,9 +85,12 @@
     font-family: 'Open Sans', sans-serif;
     cursor: pointer;
     width: 100%;
-    text-align: center;
+    text-align: left;
     box-sizing: border-box;
     margin: 2px 0px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .floating-ui-cleaner button:hover,
