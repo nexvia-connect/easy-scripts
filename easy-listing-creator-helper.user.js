@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.6
-// @description  Floating JSON UI with import/export via URL (#/route?data=base64)
+// @version      4.7
+// @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -27,6 +27,15 @@
                 localStorage.setItem(LAST_USED_KEY, Date.now());
                 setTimeout(() => {
                     location.replace(location.origin + location.pathname + '#/');
+                    const tryClick = () => {
+                        const btn = document.querySelector('a.btn-saisie.btn-lot.btn');
+                        if (btn) {
+                            btn.click();
+                        } else {
+                            setTimeout(tryClick, 500);
+                        }
+                    };
+                    setTimeout(tryClick, 1500);
                 }, 10);
             }
         } catch {
@@ -105,7 +114,12 @@
         if (val === 'true' || val === 'false') return 'boolean';
         if (key === 'Download file' || key === 'Download description') return 'fetchText';
         if (extractMarkdownLink(val)) return 'markdown';
-        if (['photos', 'floorplans', 'listing errors', 'hidden listings'].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
+        if ([
+            'photos',
+            'floorplans',
+            'listing errors',
+            'hidden listings'
+        ].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
         if (val.startsWith('http') && /\.(zip|pdf|docx?|xlsx?|jpg|png|jpeg|gif)/i.test(val)) return 'downloadLink';
         if (val.startsWith('http')) return 'copyText';
         return 'text';
@@ -134,9 +148,6 @@
             }
 
             case 'externalOpen':
-                html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Open</button></a></div>`;
-                break;
-
             case 'downloadLink':
                 html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Download</button></a></div>`;
                 break;
