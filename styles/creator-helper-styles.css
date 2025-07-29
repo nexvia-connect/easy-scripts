@@ -206,11 +206,13 @@ textarea#elch-inline-input {
 }
 
 .elch-title-left {
-  left: 12px;
+  left: -6px;
+  top: -4px;
 }
 
 .elch-title-right {
-  right: 12px;
+  right: -6px;
+  top: -4px;
 }
 
 .elch-wrapper.left {
