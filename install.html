@@ -68,24 +68,18 @@
       margin-top: 10px;
     }
     .help-section {
+      background: #fff8cc;
+      border-radius: 5px;
+      padding: 20px;
       margin-top: 40px;
       text-align: center;
     }
     .help-section h2 {
-      font-size: 20px;
+      font-size: 18px;
       margin-bottom: 12px;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 4px;
-      display: inline-block;
     }
-    .help-section ol {
-      padding-left: 0;
-      display: inline-block;
-      text-align: left;
-      list-style: decimal inside;
-    }
-    .help-section li {
-      margin-bottom: 12px;
+    .help-section .step {
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -120,11 +114,9 @@
 
   <div class="help-section">
     <h2>If Easy-Suite does not appear</h2>
-    <ol>
-      <li>Visit <strong>chrome://extensions</strong></li>
-      <li>Find <strong>Tampermonkey</strong> and click <strong>Details</strong></li>
-      <li>Activate <strong>Allow user scripts</strong></li>
-    </ol>
+    <div class="step">1. Visit <strong>chrome://extensions</strong></div>
+    <div class="step">2. Find <strong>Tampermonkey</strong> and click <strong>Details</strong></div>
+    <div class="step">3. Activate <strong>Allow user scripts</strong></div>
   </div>
 </body>
 </html>
