@@ -194,3 +194,31 @@ textarea#elch-inline-input {
     margin-top: 2px;
     bottom: 2px;
 }
+
+.elch-title-controls {
+  position: absolute;
+  top: 6px;
+  display: flex;
+  align-items: center;
+  color: white;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.elch-title-left {
+  left: 12px;
+}
+
+.elch-title-right {
+  right: 12px;
+}
+
+.elch-wrapper.left {
+  right: auto !important;
+  left: 20px !important;
+}
+
+.elch-wrapper.right {
+  left: auto !important;
+  right: 20px !important;
+}
