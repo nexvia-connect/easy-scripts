@@ -289,7 +289,7 @@
 
                     if (communeName.startsWith('Luxembourg-')) {
                         setVal('locality', 'Luxembourg');
-                        const zoneName = communeName.replace('Luxembourg-', '').trim();
+                        const zoneName = communeName.trim();
                         const zoneSelect = document.querySelector('mat-select[name="zones"]');
                         if (zoneSelect) {
                             zoneSelect.click();
