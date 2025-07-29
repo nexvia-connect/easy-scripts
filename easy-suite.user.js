@@ -7,6 +7,7 @@
 // @include      https://nexvia1832.easy-serveur53.com/*
 // @grant        none
 // @connect      raw.githubusercontent.com
+// @run-at       document-idle
 // ==/UserScript==
 
 (function () {
