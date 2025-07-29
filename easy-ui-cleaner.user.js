@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Easy UI cleaner (v3.19 Top-right, titled)
+// @name         Easy UI cleaner (v3.20 Top-right, icons)
 // @namespace    http://tampermonkey.net/
-// @version      3.19
+// @version      3.20
 // @description  Toggle visibility of UI elements and save preferences with precise full path control and multi-toggle per block
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
@@ -134,7 +134,7 @@
     function confirmEditState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(hiddenInputs)));
         editMode = false;
-        document.getElementById('toggle-edit').textContent = 'Show/Hide elements';
+        document.getElementById('toggle-edit').innerHTML = '<span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">contrast_circle</span>Show/Hide elements';
         removeEditButtons();
         applyHiddenStates();
     }
@@ -171,7 +171,9 @@
     ui.className = 'floating-ui-cleaner';
     ui.innerHTML = `
         <h3>UI cleaner</h3>
-        <button id="toggle-edit">Show/Hide elements</button>
+        <button id="toggle-edit">
+            <span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">contrast_circle</span>Show/Hide elements
+        </button>
         <button id="edit-hidden">
             <span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">settings</span>Options
         </button>
@@ -180,7 +182,9 @@
 
     document.getElementById('toggle-edit').addEventListener('click', () => {
         editMode = !editMode;
-        document.getElementById('toggle-edit').textContent = editMode ? 'Confirm' : 'Show/Hide elements';
+        document.getElementById('toggle-edit').innerHTML = editMode
+            ? '<span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">check_circle</span>Confirm'
+            : '<span class="material-icons-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">contrast_circle</span>Show/Hide elements';
         if (editMode) addEditButtons();
         else confirmEditState();
         applyHiddenStates();
