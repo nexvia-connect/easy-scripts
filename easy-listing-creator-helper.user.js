@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.18
-// @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
+// @version      4.21
+// @description  Floating JSON UI with import/export via URL (#/route?data=base64) and collapse only on control clicks
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -13,8 +13,6 @@
     const STORAGE_KEY = 'easy_listing_data';
     const LAST_USED_KEY = 'easy_listing_last_used';
     let jsonData = {};
-    let collapseTimeout = null;
-
     let redirectedViaHash = false;
 
     if (location.hash.includes('data=')) {
@@ -67,19 +65,22 @@
         collapsedCircle.style.display = 'flex';
     }
 
-    wrapper.addEventListener('mouseenter', () => clearTimeout(collapseTimeout));
-    wrapper.addEventListener('mouseleave', () => {
-        collapseTimeout = setTimeout(collapseUI, 1000);
-    });
-
     collapsedCircle.addEventListener('click', () => {
         wrapper.classList.contains('expanded') ? collapseUI() : expandUI();
     });
 
     document.addEventListener('click', (e) => {
         const target = e.target;
-        if (!wrapper.contains(target)) collapseUI();
-        else if (!['elch-inline-save', 'elch-inline-reset'].includes(target.id)) clearTimeout(collapseTimeout);
+        const isControl = target.closest('.copy') ||
+                          target.closest('.fetch-txt') ||
+                          target.closest('.elch-download') ||
+                          target.closest('#elch-inline-save') ||
+                          target.closest('#elch-inline-reset') ||
+                          target.closest('.elch-title');
+
+        if (isControl) {
+            collapseUI();
+        }
     });
 
     function extractMarkdownLink(str) {
@@ -90,11 +91,6 @@
     function extractSimpleSet(str) {
         const match = str.match(/"([^\"]+)"[^`]*`([^`]+)`/);
         return match ? { key: match[1], value: match[2] } : null;
-    }
-
-    function collapseImmediately() {
-        collapseUI();
-        clearTimeout(collapseTimeout);
     }
 
     function copyToClipboard(val) {
@@ -110,12 +106,7 @@
         if (val === 'true' || val === 'false') return 'boolean';
         if (key === 'Download file' || key === 'Download description') return 'fetchText';
         if (extractMarkdownLink(val)) return 'markdown';
-        if ([
-            'photos',
-            'floorplans',
-            'listing errors',
-            'hidden listings'
-        ].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
+        if (['photos', 'floorplans', 'listing errors', 'hidden listings'].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
         if (val.startsWith('http') && /\.(zip|pdf|docx?|xlsx?|jpg|png|jpeg|gif)/i.test(val)) return 'downloadLink';
         if (val.startsWith('http')) return 'copyText';
         return 'text';
@@ -146,10 +137,8 @@
 
         const copyBtn = row.querySelector('.copy');
         if (copyBtn) {
-            copyBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
+            copyBtn.addEventListener('click', () => {
                 copyToClipboard(val);
-                setTimeout(collapseImmediately, 0);
             });
         }
 
@@ -160,7 +149,6 @@
                     const res = await fetch(val);
                     const text = await res.text();
                     copyToClipboard(text);
-                    collapseImmediately();
                 } catch {
                     alert('Failed to fetch or copy .txt file.');
                 }
