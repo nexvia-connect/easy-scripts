@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.11
+// @version      4.13
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -86,6 +86,11 @@
     function extractMarkdownLink(str) {
         const match = str.match(/\[([^\]]+)]\(([^)]+)\)/);
         return match ? { label: match[1], url: match[2] } : null;
+    }
+
+    function extractSimpleSet(str) {
+        const match = str.match(/\"([^\"]+)\"\s+is\s+`([^`]+)`/);
+        return match ? { key: match[1], value: match[2] } : null;
     }
 
     function collapseImmediately() {
