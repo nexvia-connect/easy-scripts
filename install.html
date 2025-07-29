@@ -69,20 +69,22 @@
     }
     .help-section {
       margin-top: 40px;
-      text-align: left;
+      text-align: center;
     }
     .help-section h2 {
       font-size: 20px;
       margin-bottom: 12px;
       border-bottom: 1px solid #ccc;
       padding-bottom: 4px;
+      display: inline-block;
     }
     .help-section ol {
-      padding-left: 20px;
+      padding-left: 0;
+      display: inline-block;
+      text-align: left;
+      list-style: decimal inside;
     }
     .help-section li {
-      list-style: decimal;
-      text-align: left;
       margin-bottom: 12px;
     }
   </style>
@@ -116,9 +118,9 @@
     <li>Refresh <strong>https://nexvia1832.easy-serveur53.com/</strong>.</li>
   </ol>
 
- <div class="help-section" style="text-align: center;">
+  <div class="help-section">
     <h2>If Easy-Suite does not appear</h2>
-    <ol style="display: inline-block; text-align: center;">
+    <ol>
       <li>Visit <strong>chrome://extensions</strong></li>
       <li>Find <strong>Tampermonkey</strong> and click <strong>Details</strong></li>
       <li>Activate <strong>Allow user scripts</strong></li>
