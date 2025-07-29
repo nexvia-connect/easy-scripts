@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.19
+// @version      4.18
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -58,20 +58,6 @@
 
                     if (communeName.startsWith('Luxembourg-')) {
                         setVal('locality', 'Luxembourg');
-                        const zoneName = communeName.trim();
-                        const zoneSelect = document.querySelector('mat-select[name="zones"]');
-                        if (zoneSelect) {
-                            zoneSelect.click();
-                            setTimeout(() => {
-                                const options = document.querySelectorAll('mat-option');
-                                for (const opt of options) {
-                                    if (opt.textContent.trim() === zoneName) {
-                                        opt.click();
-                                        break;
-                                    }
-                                }
-                            }, 300);
-                        }
                     } else {
                         setVal('locality', communeName);
                     }
