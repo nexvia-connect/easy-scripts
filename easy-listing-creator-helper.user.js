@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.17
+// @version      4.18
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -275,7 +275,7 @@
                 setTimeout(() => {
                     const addr = jsonData['3. Coordonnées']?.['Adresse'] || '';
                     const [_, streetNumber, streetName, postalCode, ...communeParts] = addr.match(/^(\S+)\s+(.*?)\s+L-(\d{4})\s+(.*)$/) || [];
-                    const communeName = communeParts?.join(' ') || '';
+                    let communeName = communeParts?.join(' ') || '';
 
                     const setVal = (name, val) => {
                         const el = document.querySelector(`input[name="${name}"]`);
@@ -286,7 +286,26 @@
                     setVal('street_number', streetNumber);
                     setVal('route', streetName);
                     setVal('postal_code', postalCode);
-                    setVal('locality', communeName);
+
+                    if (communeName.startsWith('Luxembourg-')) {
+                        setVal('locality', 'Luxembourg');
+                        const zoneName = communeName.replace('Luxembourg-', '').trim();
+                        const zoneSelect = document.querySelector('mat-select[name="zones"]');
+                        if (zoneSelect) {
+                            zoneSelect.click();
+                            setTimeout(() => {
+                                const options = document.querySelectorAll('mat-option');
+                                for (const opt of options) {
+                                    if (opt.textContent.trim() === zoneName) {
+                                        opt.click();
+                                        break;
+                                    }
+                                }
+                            }, 300);
+                        }
+                    } else {
+                        setVal('locality', communeName);
+                    }
 
                     const countrySelect = document.querySelector('mat-select[name="pay_id"]');
                     if (countrySelect) {
