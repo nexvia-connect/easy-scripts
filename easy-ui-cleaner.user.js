@@ -172,7 +172,7 @@
     ui.innerHTML = `
         <h3>UI cleaner</h3>
         <button id="toggle-edit">
-            <span class="material-icons-outlined button-icon">contrast_circle</span>Show/Hide elements
+            <span class="material-icons-outlined button-icon">visibility</span>Show/Hide elements
         </button>
         <button id="edit-hidden">
             <span class="material-icons-outlined button-icon">settings</span>Options
