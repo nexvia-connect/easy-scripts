@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.14
+// @version      4.15
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64) and auto-popup trigger
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -17,7 +17,6 @@
 
     let redirectedViaHash = false;
 
-    // Base64 JSON preload from hash with ?data=...
     if (location.hash.includes('data=')) {
         try {
             const params = new URLSearchParams(location.hash.split('?')[1]);
@@ -274,8 +273,8 @@
             if (btn) {
                 btn.click();
                 setTimeout(() => {
-                    const input = document.querySelector('input[formcontrolname="adresse"]');
-                    const addr = jsonData['1. Informations complémentaires']?.['Adresse'] || '';
+                    const input = document.querySelector('input[name="adresse_search"]');
+                    const addr = jsonData['3. Coordonnées']?.['Adresse'] || '';
                     if (input && addr) input.value = addr;
                 }, 1000);
             } else {
