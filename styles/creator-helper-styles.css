@@ -17,6 +17,7 @@
 .elch-wrapper {
   position: fixed;
   bottom: 20px;
+  right: 20px; /* default */
   width: 400px;
   transition: all 0.3s ease, left 0.4s ease-in-out, right 0.4s ease-in-out;
   z-index: 9999;
@@ -220,11 +221,6 @@ textarea#elch-inline-input {
 }
 
 .elch-wrapper.left {
-  right: auto;
-  left: 20px;
-}
-
-.elch-wrapper.right {
-  left: auto;
-  right: 20px;
+  right: auto;      /* no !important */
+  left: 20px;       /* no !important */
 }
