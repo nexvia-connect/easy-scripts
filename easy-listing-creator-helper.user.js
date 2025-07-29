@@ -196,6 +196,11 @@
             titleDiv.appendChild(titleText);
             titleDiv.appendChild(pipeLink);
             titleDiv.appendChild(iconRight);
+            titleDiv.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('material-icons')) {
+                    collapseUI();
+                }
+            });
             sectionBox.appendChild(titleDiv);
         }
 
