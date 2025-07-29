@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.21
-// @description  Floating JSON UI with import/export via URL (#/route?data=base64) and collapse only on control clicks
+// @version      4.24
+// @description  Floating JSON UI with import/export via URL (#/route?data=base64), collapses only on control clicks, and supports left/right screen alignment
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -43,7 +43,7 @@
     document.head.appendChild(iconLink);
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'elch-wrapper';
+    wrapper.className = 'elch-wrapper right';
     document.body.appendChild(wrapper);
 
     const collapsedCircle = document.createElement('div');
@@ -75,8 +75,7 @@
                           target.closest('.fetch-txt') ||
                           target.closest('.elch-download') ||
                           target.closest('#elch-inline-save') ||
-                          target.closest('#elch-inline-reset') ||
-                          target.closest('.elch-title');
+                          target.closest('#elch-inline-reset');
 
         if (isControl) {
             collapseUI();
@@ -86,11 +85,6 @@
     function extractMarkdownLink(str) {
         const match = str.match(/\[([^\]]+)]\(([^)]+)\)/);
         return match ? { label: match[1], url: match[2] } : null;
-    }
-
-    function extractSimpleSet(str) {
-        const match = str.match(/"([^\"]+)"[^`]*`([^`]+)`/);
-        return match ? { key: match[1], value: match[2] } : null;
     }
 
     function copyToClipboard(val) {
@@ -106,7 +100,7 @@
         if (val === 'true' || val === 'false') return 'boolean';
         if (key === 'Download file' || key === 'Download description') return 'fetchText';
         if (extractMarkdownLink(val)) return 'markdown';
-        if (['photos', 'floorplans', 'listing errors', 'hidden listings'].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
+        if ([ 'photos', 'floorplans', 'listing errors', 'hidden listings' ].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
         if (val.startsWith('http') && /\.(zip|pdf|docx?|xlsx?|jpg|png|jpeg|gif)/i.test(val)) return 'downloadLink';
         if (val.startsWith('http')) return 'copyText';
         return 'text';
@@ -164,6 +158,8 @@
         if (jsonData.title) {
             const titleDiv = document.createElement('div');
             titleDiv.className = 'elch-title';
+            titleDiv.style.position = 'relative';
+
             const titleText = document.createElement('span');
             titleText.textContent = jsonData.title;
 
@@ -172,8 +168,34 @@
             pipeLink.target = '_blank';
             pipeLink.innerHTML = `<img src="https://nexvia-connect.github.io/easy-scripts/media/pipedrive-favicon.png" class="elch-pipedrive-icon" />`;
 
+            const iconLeft = document.createElement('span');
+            iconLeft.className = 'material-icons elch-title-controls elch-title-left';
+            iconLeft.textContent = 'keyboard_arrow_left';
+            iconLeft.title = 'Align left';
+            iconLeft.onclick = (e) => {
+                e.stopPropagation();
+                wrapper.classList.remove('right');
+                wrapper.classList.add('left');
+                wrapper.classList.add('expanded');
+                collapsedCircle.style.display = 'none';
+            };
+
+            const iconRight = document.createElement('span');
+            iconRight.className = 'material-icons elch-title-controls elch-title-right';
+            iconRight.textContent = 'keyboard_arrow_right';
+            iconRight.title = 'Align right';
+            iconRight.onclick = (e) => {
+                e.stopPropagation();
+                wrapper.classList.remove('left');
+                wrapper.classList.add('right');
+                wrapper.classList.add('expanded');
+                collapsedCircle.style.display = 'none';
+            };
+
+            titleDiv.appendChild(iconLeft);
             titleDiv.appendChild(titleText);
             titleDiv.appendChild(pipeLink);
+            titleDiv.appendChild(iconRight);
             sectionBox.appendChild(titleDiv);
         }
 
@@ -183,7 +205,7 @@
         importSection.innerHTML = `
             <summary>0. Import code</summary>
             <div class="elch-entry" style="flex-direction: column;">
-                <textarea id="elch-inline-input" style="width:100%;height:100px;font-family:monospace;font-size:12px;background:#111;color:#eee;border:1px solid #444;">${Object.keys(jsonData).length > 0 ? JSON.stringify(jsonData, null, 2) : ''}</textarea><br>
+                <textarea id="elch-inline-input">${Object.keys(jsonData).length > 0 ? JSON.stringify(jsonData, null, 2) : ''}</textarea><br>
                 <button id="elch-inline-save">Load</button>
                 <button id="elch-inline-reset">Reset</button>
             </div>`;
@@ -224,18 +246,15 @@
                 details.appendChild(row);
             }
 
-            sectionBox.appendChild(details);
-        }
-
-        const detailNodes = sectionBox.querySelectorAll('details');
-        detailNodes.forEach((d) => {
-            const s = d.querySelector('summary');
-            s?.addEventListener('click', () => {
-                detailNodes.forEach((o) => {
-                    if (o !== d) o.removeAttribute('open');
+            const summaryEl = details.querySelector('summary');
+            summaryEl.addEventListener('click', () => {
+                document.querySelectorAll('.elch-section').forEach(other => {
+                    if (other !== details) other.removeAttribute('open');
                 });
             });
-        });
+
+            sectionBox.appendChild(details);
+        }
     }
 
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -254,65 +273,4 @@
     }
 
     showSections();
-
-    if (redirectedViaHash) {
-        const tryClick = () => {
-            const btn = document.querySelector('a.btn-saisie.btn-lot.btn');
-            if (btn) {
-                btn.click();
-                setTimeout(() => {
-                    const addr = jsonData['3. Coordonnées']?.['Adresse'] || '';
-                    const [_, streetNumber, streetName, postalCode, ...communeParts] = addr.match(/^(\S+)\s+(.*?)\s+L-(\d{4})\s+(.*)$/) || [];
-                    let communeName = communeParts?.join(' ') || '';
-
-                    const setVal = (name, val) => {
-                        const el = document.querySelector(`input[name="${name}"]`);
-                        if (el && val) el.value = val;
-                    };
-
-                    setVal('adresse_search', addr);
-                    setVal('street_number', streetNumber);
-                    setVal('route', streetName);
-                    setVal('postal_code', postalCode);
-
-                    if (communeName.startsWith('Luxembourg-')) {
-                        setVal('locality', 'Luxembourg');
-                        const zoneName = communeName.trim();
-                        const zoneSelect = document.querySelector('mat-select[name="zones"]');
-                        if (zoneSelect) {
-                            zoneSelect.click();
-                            setTimeout(() => {
-                                const options = document.querySelectorAll('mat-option');
-                                for (const opt of options) {
-                                    if (opt.textContent.trim() === zoneName) {
-                                        opt.click();
-                                        break;
-                                    }
-                                }
-                            }, 300);
-                        }
-                    } else {
-                        setVal('locality', communeName);
-                    }
-
-                    const countrySelect = document.querySelector('mat-select[name="pay_id"]');
-                    if (countrySelect) {
-                        countrySelect.click();
-                        setTimeout(() => {
-                            const options = document.querySelectorAll('mat-option');
-                            for (const opt of options) {
-                                if (opt.textContent.trim() === 'Luxembourg') {
-                                    opt.click();
-                                    break;
-                                }
-                            }
-                        }, 300);
-                    }
-                }, 1000);
-            } else {
-                setTimeout(tryClick, 500);
-            }
-        };
-        setTimeout(tryClick, 1500);
-    }
 })();
