@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Easy Suite Loader
 // @namespace    http://tampermonkey.net/
-// @version      2.9
-// @description  Load and control Easy Suite scripts with UI toggle, collapsed mode, and persistence
+// @version      3.0
+// @description  Load and control Easy Suite scripts with UI toggle, collapsed mode, persistence, and SPA support
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        none
 // @connect      raw.githubusercontent.com
@@ -204,6 +204,8 @@
   }
 
   function init() {
+    if (document.querySelector('.floating-ui')) return; // Prevent duplicate
+
     loadStyle();
 
     const faviconUrl = 'https://raw.githubusercontent.com/nexvia-connect/easy-scripts/main/media/logo.png';
@@ -233,4 +235,29 @@
   } else {
     document.addEventListener('DOMContentLoaded', init);
   }
+
+  // SPA Support: trigger init() on route changes
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+
+  function onRouteChange() {
+    const oldUrl = location.href;
+    requestAnimationFrame(() => {
+      if (location.href !== oldUrl) {
+        init();
+      }
+    });
+  }
+
+  history.pushState = function () {
+    originalPushState.apply(this, arguments);
+    onRouteChange();
+  };
+
+  history.replaceState = function () {
+    originalReplaceState.apply(this, arguments);
+    onRouteChange();
+  };
+
+  window.addEventListener('popstate', onRouteChange);
 })();
