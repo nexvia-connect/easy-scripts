@@ -130,9 +130,9 @@
             html += `<span>${val}</span> <span class="copy material-icons" style="font-size:14px;vertical-align:middle;">content_copy</span>`;
         } else if (type === 'markdown') {
             const md = extractMarkdownLink(val);
-            html = `<div>${md.label}</div><div><a href="${md.url}" target="_blank"><button class="elch-download">Download</button></a>`;
+            html = `<div>${md.label}</div><div><a href="${md.url}" target="_blank"><button class="elch-download">Open</button></a>`;
         } else if (type === 'externalOpen' || type === 'downloadLink') {
-            html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Download</button></a>`;
+            html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Open</button></a>`;
         } else if (type === 'boolean') {
             html += `<span>${val}</span>`;
         }
