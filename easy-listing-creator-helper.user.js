@@ -97,15 +97,26 @@
 
     function determineType(key, val) {
         const lowerKey = key.toLowerCase();
+    
         if (val === 'true' || val === 'false') return 'boolean';
+    
         if (key === 'Download file' || key === 'Download description') return 'fetchText';
+    
         if (extractMarkdownLink(val)) return 'markdown';
-        if ([ 'photos', 'floorplans', 'listing errors', 'hidden listings' ].includes(lowerKey) && val.startsWith('http')) return 'externalOpen';
+    
+        if (
+            typeof key === 'string' &&
+            [ "Visit 'photos'", "Visit 'floorplans'", "Visit 'listing errors'", "Visit 'hidden listings'" ].includes(key) &&
+            val.startsWith('http')
+        ) return 'externalOpen';
+    
         if (val.startsWith('http') && /\.(zip|pdf|docx?|xlsx?|jpg|png|jpeg|gif)/i.test(val)) return 'downloadLink';
+    
         if (val.startsWith('http')) return 'copyText';
+    
         return 'text';
     }
-
+    
     function renderRow(key, val) {
         const type = determineType(key, val);
         const row = document.createElement('div');
