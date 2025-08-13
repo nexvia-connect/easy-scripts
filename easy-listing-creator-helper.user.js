@@ -44,6 +44,13 @@
 
     const wrapper = document.createElement('div');
     wrapper.className = 'elch-wrapper right';
+    wrapper.style.position = 'fixed';
+    wrapper.style.zIndex = '9999';
+    wrapper.style.cursor = 'move';
+    wrapper.style.height = 'auto';
+    wrapper.style.maxHeight = '80vh';
+    wrapper.style.overflowY = 'auto';
+    wrapper.style.overflowX = 'hidden';
     document.body.appendChild(wrapper);
 
     const collapsedCircle = document.createElement('div');
@@ -53,20 +60,50 @@
 
     const sectionBox = document.createElement('div');
     sectionBox.className = 'elch-sections';
+    sectionBox.style.height = 'auto';
+    sectionBox.style.overflow = 'visible';
     wrapper.appendChild(sectionBox);
+
+    function recalculateHeight() {
+        if (wrapper.classList.contains('expanded')) {
+            setTimeout(() => {
+                const contentHeight = sectionBox.scrollHeight;
+                const maxHeight = Math.min(contentHeight, window.innerHeight * 0.8);
+                wrapper.style.height = maxHeight + 'px';
+            }, 10);
+        }
+    }
 
     function expandUI() {
         wrapper.classList.add('expanded');
         collapsedCircle.style.display = 'none';
+        wrapper.style.cursor = 'move';
+        wrapper.style.height = 'auto';
+        wrapper.style.maxHeight = '80vh';
+        wrapper.style.overflowY = 'auto';
+        wrapper.style.overflowX = 'hidden';
+
+        // Force height recalculation with a longer delay to ensure content is rendered
+        setTimeout(() => {
+            recalculateHeight();
+        }, 50);
     }
 
     function collapseUI() {
         wrapper.classList.remove('expanded');
         collapsedCircle.style.display = 'flex';
+        wrapper.style.cursor = 'default';
+        wrapper.style.height = 'auto';
+        wrapper.style.overflowY = 'visible';
+        wrapper.style.overflowX = 'visible';
     }
 
     collapsedCircle.addEventListener('click', () => {
-        wrapper.classList.contains('expanded') ? collapseUI() : expandUI();
+        if (wrapper.classList.contains('expanded')) {
+            collapseUI();
+        } else {
+            expandUI();
+        }
     });
 
     document.addEventListener('click', (e) => {
@@ -81,6 +118,92 @@
             collapseUI();
         }
     });
+
+    // Add click listener to wrapper for height recalculation
+    wrapper.addEventListener('click', (e) => {
+        // Don't recalculate if clicking on the collapsed circle
+        if (e.target.closest('.elch-collapsed-circle')) {
+            return;
+        }
+
+        // Recalculate height on any click inside the wrapper
+        recalculateHeight();
+    });
+
+    // Add drag and drop functionality
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
+
+    function startDrag(e) {
+        if (!wrapper.classList.contains('expanded')) return;
+
+        // Check if clicking on interactive elements - don't start drag
+        if (e.target.closest('button') ||
+            e.target.closest('textarea') ||
+            e.target.closest('input') ||
+            e.target.closest('.copy') ||
+            e.target.closest('.fetch-txt') ||
+            e.target.closest('.elch-download') ||
+            e.target.closest('a') ||
+            e.target.closest('summary') ||
+            e.target.closest('details') ||
+            e.target.closest('.elch-entry')) {
+            return;
+        }
+
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+
+        const rect = wrapper.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+
+        wrapper.style.transition = 'none';
+        wrapper.style.userSelect = 'none';
+
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+
+        e.preventDefault();
+    }
+
+    function onDrag(e) {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
+
+        const newLeft = initialLeft + deltaX;
+        const newTop = initialTop + deltaY;
+
+        // Keep the wrapper within viewport bounds
+        const maxLeft = window.innerWidth - wrapper.offsetWidth;
+        const maxTop = window.innerHeight - wrapper.offsetHeight;
+
+        wrapper.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
+        wrapper.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+    }
+
+    function stopDrag() {
+        if (!isDragging) return;
+
+        isDragging = false;
+        wrapper.style.transition = '';
+        wrapper.style.userSelect = '';
+
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+    }
+
+    // Add drag event listeners
+    wrapper.addEventListener('mousedown', startDrag);
+
+    // Remove the old drag prevention logic since it's now handled in startDrag
+    // wrapper.addEventListener('mousedown', (e) => { ... });
 
     function extractMarkdownLink(str) {
         const match = str.match(/\[([^\]]+)]\(([^)]+)\)/);
@@ -166,62 +289,56 @@
     function showSections() {
         sectionBox.innerHTML = '';
 
-        if (jsonData.title) {
-            const titleDiv = document.createElement('div');
-            titleDiv.className = 'elch-title';
-            titleDiv.style.position = 'relative';
+        // Always show title section, but with different content based on data
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'elch-title';
+        titleDiv.style.position = 'relative';
+        titleDiv.style.display = 'flex';
+        titleDiv.style.justifyContent = 'space-between';
+        titleDiv.style.alignItems = 'center';
 
-            const titleText = document.createElement('span');
-            titleText.textContent = jsonData.title;
+        const titleContainer = document.createElement('div');
+        titleContainer.style.display = 'flex';
+        titleContainer.style.alignItems = 'center';
+        titleContainer.style.gap = '8px';
 
+        const titleText = document.createElement('span');
+        titleText.textContent = jsonData.title || 'Easy creator';
+
+        // Look for Pipedrive URL in any section
+        let pipedriveUrl = null;
+        for (const section in jsonData) {
+            if (jsonData[section] && typeof jsonData[section] === 'object') {
+                if (jsonData[section]['URL du deal Pipedrive']) {
+                    pipedriveUrl = jsonData[section]['URL du deal Pipedrive'];
+                    break;
+                }
+            }
+        }
+
+        // Show Pipedrive link if we have a valid URL
+        if (pipedriveUrl) {
             const pipeLink = document.createElement('a');
-            pipeLink.href = jsonData['3. Coordonnées']?.['URL du deal Pipedrive'] || '#';
+            pipeLink.href = pipedriveUrl;
             pipeLink.target = '_blank';
             pipeLink.innerHTML = `<img src="https://nexvia-connect.github.io/easy-scripts/media/pipedrive-favicon.png" class="elch-pipedrive-icon" />`;
-
-            const iconLeft = document.createElement('span');
-            iconLeft.className = 'material-icons elch-title-controls elch-title-left';
-            iconLeft.textContent = 'keyboard_arrow_left';
-            iconLeft.title = 'Align left';
-            iconLeft.onclick = (e) => {
-                e.stopPropagation();
-                if (wrapper.classList.contains('right')) {
-                    wrapper.classList.remove('right');
-                    requestAnimationFrame(() => {
-                        wrapper.classList.add('left');
-                    });
-                }
-                wrapper.classList.add('expanded');
-                collapsedCircle.style.display = 'none';
-            };
-
-            const iconRight = document.createElement('span');
-            iconRight.className = 'material-icons elch-title-controls elch-title-right';
-            iconRight.textContent = 'keyboard_arrow_right';
-            iconRight.title = 'Align right';
-            iconRight.onclick = (e) => {
-                e.stopPropagation();
-                if (wrapper.classList.contains('left')) {
-                    wrapper.classList.remove('left');
-                    requestAnimationFrame(() => {
-                        wrapper.classList.add('right');
-                    });
-                }
-                wrapper.classList.add('expanded');
-                collapsedCircle.style.display = 'none';
-            };
-
-            titleDiv.appendChild(iconLeft);
-            titleDiv.appendChild(titleText);
-            titleDiv.appendChild(pipeLink);
-            titleDiv.appendChild(iconRight);
-            titleDiv.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('material-icons')) {
-                    collapseUI();
-                }
-            });
-            sectionBox.appendChild(titleDiv);
+            titleContainer.appendChild(pipeLink);
         }
+
+        const closeButton = document.createElement('span');
+        closeButton.className = 'material-icons elch-close';
+        closeButton.textContent = 'close';
+        closeButton.title = 'Close';
+        closeButton.style.cursor = 'pointer';
+        closeButton.onclick = (e) => {
+            e.stopPropagation();
+            collapseUI();
+        };
+
+        titleContainer.appendChild(titleText);
+        titleDiv.appendChild(titleContainer);
+        titleDiv.appendChild(closeButton);
+        sectionBox.appendChild(titleDiv);
 
         const importSection = document.createElement('details');
         importSection.className = 'elch-section';
@@ -275,10 +392,16 @@
                 document.querySelectorAll('.elch-section').forEach(other => {
                     if (other !== details) other.removeAttribute('open');
                 });
+
+                // Force height recalculation after section toggle
+                recalculateHeight();
             });
 
             sectionBox.appendChild(details);
         }
+
+        // Initial height calculation after content is loaded
+        recalculateHeight();
     }
 
     const saved = localStorage.getItem(STORAGE_KEY);
