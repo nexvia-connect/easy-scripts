@@ -14,9 +14,8 @@
     const LAST_USED_KEY = 'easy_listing_last_used';
     let jsonData = {};
     let redirectedViaHash = false;
-    let isProcessingDropdowns = false; // NEW: Flag to prevent multiple dropdown processing
-    
-    // NEW: Track filled fields to avoid refilling - but only mark as filled when actually successful
+    let isProcessingDropdowns = false;
+
     let filledFields = new Set();
     let filledDropdowns = new Set();
 
@@ -75,7 +74,7 @@
                 const contentHeight = sectionBox.scrollHeight;
                 const maxHeight = Math.min(contentHeight, window.innerHeight * 0.8);
                 wrapper.style.height = maxHeight + 'px';
-            }, 100);
+            }, 10);
         }
     }
 
@@ -83,483 +82,672 @@
         wrapper.classList.add('expanded');
         collapsedCircle.style.display = 'none';
         wrapper.style.cursor = 'move';
-        recalculateHeight();
+        wrapper.style.height = 'auto';
+        wrapper.style.maxHeight = '80vh';
+        wrapper.style.overflowY = 'auto';
+        wrapper.style.overflowX = 'hidden';
+
+        setTimeout(() => {
+            recalculateHeight();
+        }, 50);
     }
 
     function collapseUI() {
         wrapper.classList.remove('expanded');
         collapsedCircle.style.display = 'flex';
         wrapper.style.cursor = 'default';
+        wrapper.style.height = 'auto';
+        wrapper.style.overflowY = 'visible';
+        wrapper.style.overflowX = 'visible';
     }
 
     collapsedCircle.addEventListener('click', () => {
-        wrapper.classList.contains('expanded') ? collapseUI() : expandUI();
+        if (wrapper.classList.contains('expanded')) {
+            collapseUI();
+        } else {
+            expandUI();
+        }
     });
 
-    // NEW: Only close when clicking the X button
-    document.addEventListener('click', (e) => {
-        const target = e.target;
-        const isControl = target.closest('.copy') ||
-                       target.closest('.open-link') ||
-                       target.closest('.elch-close');
-        
-        if (isControl) {
-            if (target.closest('.elch-close')) {
-                collapseUI();
-            }
+    // REMOVED: The document click listener that was closing the UI on copy clicks
+
+    wrapper.addEventListener('click', (e) => {
+        if (e.target.closest('.elch-collapsed-circle')) {
             return;
         }
-        
-        // Only recalculate height on clicks inside the UI
-        if (target.closest('.elch-wrapper')) {
-            recalculateHeight();
-        }
+        recalculateHeight();
     });
 
-    // NEW: Add visual feedback for icon clicks
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
+
+    function startDrag(e) {
+        if (!wrapper.classList.contains('expanded')) return;
+
+        if (e.target.closest('button') ||
+            e.target.closest('textarea') ||
+            e.target.closest('input') ||
+            e.target.closest('.copy') ||
+            e.target.closest('.fetch-txt') ||
+            e.target.closest('.elch-download') ||
+            e.target.closest('a') ||
+            e.target.closest('summary') ||
+            e.target.closest('details') ||
+            e.target.closest('.elch-entry')) {
+            return;
+        }
+
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+
+        const rect = wrapper.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+
+        wrapper.style.transition = 'none';
+        wrapper.style.userSelect = 'none';
+
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+
+        e.preventDefault();
+    }
+
+    function onDrag(e) {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
+
+        const newLeft = initialLeft + deltaX;
+        const newTop = initialTop + deltaY;
+
+        const maxLeft = window.innerWidth - wrapper.offsetWidth;
+        const maxTop = window.innerHeight - wrapper.offsetHeight;
+
+        wrapper.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
+        wrapper.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+    }
+
+    function stopDrag() {
+        if (!isDragging) return;
+
+        isDragging = false;
+        wrapper.style.transition = '';
+        wrapper.style.userSelect = '';
+
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+    }
+
+    wrapper.addEventListener('mousedown', startDrag);
+
+    function extractMarkdownLink(str) {
+        const match = str.match(/\[([^\]]+)]\(([^)]+)\)/);
+        return match ? { label: match[1], url: match[2] } : null;
+    }
+
+    // NEW: Function to show icon feedback (white flash, then back to blue)
     function showIconFeedback(iconElement) {
         // Change to white
         iconElement.style.color = 'white';
-        
+
         // Change back to blue after 2 seconds
         setTimeout(() => {
             iconElement.style.color = '#2196F3'; // Blue color
         }, 2000);
     }
 
-    // NEW: Address parsing function
-    function parseAddress(addressString) {
-        if (!addressString) return null;
-        
-        // Pattern: "4 Rue De Keispelt L-8291 Kehlen"
-        const match = addressString.match(/^(\d+[A-Za-z]*)\s+(.+?)\s+(L-\d{4})\s+(.+)$/);
-        
-        if (match) {
-            return {
-                propertyNumber: match[1],      // "4" or "4A"
-                streetName: match[2],          // "Rue De Keispelt"
-                postCode: match[3],            // "L-8291"
-                city: match[4]                 // "Kehlen"
+    function copyToClipboard(val) {
+        try {
+            navigator.clipboard.writeText(val).catch(() => GM_setClipboard(val));
+        } catch {
+            GM_setClipboard(val);
+        }
+    }
+
+    function determineType(key, val) {
+        const lowerKey = key.toLowerCase();
+
+        if (val === 'true' || val === 'false') return 'boolean';
+
+        if (key === 'Download file' || key === 'Download description') return 'fetchText';
+
+        if (extractMarkdownLink(val)) return 'markdown';
+
+        if (
+            typeof key === 'string' &&
+            [ "photos", "floorplans", "Visit 'listing errors'", "Visit 'hidden listings'" ].includes(key) &&
+            val.startsWith('http')
+        ) return 'externalOpen';
+
+        if (val.startsWith('http') && /\.(zip|pdf|docx?|xlsx?|jpg|png|jpeg|gif)/i.test(val)) return 'downloadLink';
+
+        if (val.startsWith('http')) return 'copyText';
+
+        return 'text';
+    }
+
+    function renderRow(key, val) {
+        const type = determineType(key, val);
+        const row = document.createElement('div');
+        row.className = 'elch-entry';
+
+        let html = `<div>${key}</div><div>`;
+
+        if (type === 'fetchText') {
+            html += `<span class="copy fetch-txt material-icons" style="font-size:14px;vertical-align:middle;" data-url="${val}">content_copy</span>`;
+        } else if (type === 'copyText' || type === 'text') {
+            // NEW: Apply 9px font size for values >30 characters
+            const fontSize = val.length > 40 ? '8px' : val.length > 20 ? '10px' : '14px';
+            html += `<span style="font-size:${fontSize};">${val}</span> <span class="copy material-icons" style="font-size:14px;vertical-align:middle;">content_copy</span>`;
+        } else if (type === 'markdown') {
+            const md = extractMarkdownLink(val);
+            html = `<div>${md.label}</div><div><a href="${md.url}" target="_blank"><button class="elch-download">Open</button></a>`;
+        } else if (type === 'externalOpen' || type === 'downloadLink') {
+            html = `<div>${key}</div><div><a href="${val}" target="_blank"><button class="elch-download">Open</button></a>`;
+        } else if (type === 'boolean') {
+            html += `<span>${val}</span>`;
+        }
+
+        html += '</div>';
+        row.innerHTML = html;
+
+        const copyBtn = row.querySelector('.copy');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                copyToClipboard(val);
+                // NEW: Show icon feedback
+                showIconFeedback(copyBtn);
+            });
+        }
+
+        const fetchBtn = row.querySelector('.fetch-txt');
+        if (fetchBtn) {
+            fetchBtn.onclick = async () => {
+                try {
+                    const res = await fetch(val);
+                    const text = await res.text();
+                    copyToClipboard(text);
+                    // NEW: Show icon feedback
+                    showIconFeedback(fetchBtn);
+                } catch {
+                    alert('Failed to fetch or copy .txt file.');
+                }
             };
         }
-        
+
+        return row;
+    }
+
+    function parseAddress(address) {
+        if (!address) return null;
+
+        const regex = /^(\d+[A-Za-z]*)\s+(.+?)\s+(L-\d{4})\s+(.+)$/;
+        const match = address.match(regex);
+
+        if (match) {
+            return {
+                propertyNumber: match[1],
+                streetName: match[2],
+                postCode: match[3],
+                city: match[4]
+            };
+        }
         return null;
     }
 
-    // NEW: Enhanced form filling function
-    function fillFormFields() {
-        if (!jsonData || Object.keys(jsonData).length === 0) return;
-        
-        // Parse address if available
-        const addressInfo = parseAddress(jsonData['3. Coordonnées']?.['Adresse']);
-        
-        // Find and fill form fields
-        const fieldMappings = [
-            // Address fields
-            { selector: 'input[formcontrolname="street_number"]', value: addressInfo?.propertyNumber, fieldType: 'input' },
-            { selector: 'input[formcontrolname="route"]', value: addressInfo?.streetName, fieldType: 'input' },
-            { selector: 'input[formcontrolname="postal_code"]', value: addressInfo?.postCode, fieldType: 'input' },
-            { selector: 'input[formcontrolname="locality"]', value: addressInfo?.city, fieldType: 'input' },
-            
-            // Property details
-            { selector: 'input[formcontrolname="surface"]', value: jsonData['2. Informations Générales']?.['Surface au sol'], fieldType: 'input' },
-            { selector: 'input[formcontrolname="etage"]', value: jsonData['2. Informations Générales']?.['Etage'], fieldType: 'input' },
-            { selector: 'input[formcontrolname="budget"]', value: jsonData['2. Informations Générales']?.['Prix de Vente'], fieldType: 'input' },
-            { selector: 'input[formcontrolname="nb_chambres"]', value: jsonData['2. Informations Générales']?.['Chambres'], fieldType: 'input' },
-            { selector: 'input[formcontrolname="nb_sdb"]', value: jsonData['2. Informations Générales']?.['Salles de bain'], fieldType: 'input' },
-            { selector: 'input[formcontrolname="nb_etages"]', value: jsonData['2. Informations Générales']?.['Nb étages'], fieldType: 'input' },
-            
-            // Dropdown fields
-            { selector: 'mat-select[formcontrolname="tpt_id"]', value: 'En vente', fieldType: 'dropdown' },
-            { selector: 'mat-select[formcontrolname="roles_id_commercial"]', value: jsonData['2. Informations Générales']?.['Commercial'], fieldType: 'dropdown' }
-        ];
-
-        fieldMappings.forEach(mapping => {
-            if (!mapping.value) return;
-            
-            const field = document.querySelector(mapping.selector);
-            if (!field) return;
-            
-            const fieldId = mapping.selector;
-            
-            if (mapping.fieldType === 'input') {
-                if (!filledFields.has(fieldId)) {
-                    // Fill input field
-                    field.value = mapping.value;
-                    field.dispatchEvent(new Event('input', { bubbles: true }));
-                    field.dispatchEvent(new Event('change', { bubbles: true }));
-                    filledFields.add(fieldId);
-                    
-                    // Show feedback
-                    showIconFeedback(field);
-                }
-            } else if (mapping.fieldType === 'dropdown') {
-                if (!filledDropdowns.has(fieldId)) {
-                    // Handle dropdown selection
-                    selectDropdownOption(field, mapping.value);
-                }
+    function fillAngularField(field, value, fieldName) {
+        if (filledFields.has(fieldName)) {
+            if (field.value === value || field.value === value.toString()) {
+                console.log(`Field ${fieldName} already filled with correct value, skipping`);
+                return false;
+            } else {
+                console.log(`Field ${fieldName} value changed, refilling`);
+                filledFields.delete(fieldName);
             }
-        });
-    }
-
-    // NEW: Dropdown selection function
-    function selectDropdownOption(dropdown, targetText) {
-        if (isProcessingDropdowns) return;
-        isProcessingDropdowns = true;
-        
-        try {
-            // Click to open dropdown
-            dropdown.click();
-            
-            // Wait for dropdown to open
-            setTimeout(() => {
-                const options = document.querySelectorAll('.mat-option .mat-option-text');
-                let foundOption = null;
-                
-                for (const option of options) {
-                    const optionText = option.textContent.trim();
-                    if (optionText.toLowerCase() === targetText.toLowerCase()) {
-                        foundOption = option;
-                        break;
-                    }
-                }
-                
-                if (foundOption) {
-                    // Show feedback on the dropdown icon
-                    const dropdownIcon = dropdown.querySelector('.mat-select-arrow');
-                    if (dropdownIcon) {
-                        showIconFeedback(dropdownIcon);
-                    }
-                    
-                    foundOption.click();
-                    filledDropdowns.add(dropdown.getAttribute('formcontrolname'));
-                }
-                
-                isProcessingDropdowns = false;
-            }, 500);
-        } catch (error) {
-            isProcessingDropdowns = false;
         }
+
+        field.value = value;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+
+        if (field._ngModel) {
+            field._ngModel.setValue(value);
+        }
+
+        const angularElement = field.closest('[ng-version]') || field.closest('[ng-model]') || field;
+        if (angularElement && angularElement.ngModel) {
+            angularElement.ngModel.$setViewValue(value);
+        }
+
+        field.focus();
+        field.blur();
+
+        setTimeout(() => {
+            if (field.value === value || field.value === value.toString()) {
+                filledFields.add(fieldName);
+                console.log(`Field ${fieldName} successfully filled with value: ${value}`);
+            } else {
+                console.log(`Field ${fieldName} fill verification failed, will retry`);
+            }
+        }, 100);
+
+        return true;
     }
 
-    // NEW: Monitor for form fields and fill them
-    function startFormMonitoring() {
-        // Initial fill attempt
-        fillFormFields();
-        
-        // Monitor for new form fields every 2 seconds
-        setInterval(() => {
-            fillFormFields();
-        }, 2000);
-        
-        // Also monitor for CDK overlays (popups)
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            // Check if it's a CDK overlay (popup)
-                            if (node.classList && node.classList.contains('cdk-overlay-pane')) {
-                                // Wait a bit for the form to fully load, then fill
-                                setTimeout(() => {
-                                    fillFormFields();
-                                }, 1000);
-                            }
-                        }
-                    });
+    async function processDropdownsSequentially() {
+        if (isProcessingDropdowns) return;
+
+        isProcessingDropdowns = true;
+        console.log('Starting sequential dropdown processing...');
+
+        try {
+            const overlays = document.querySelectorAll('.cdk-overlay-pane');
+
+            overlays.forEach(overlay => {
+                const tptIdField = overlay.querySelector('mat-select[formcontrolname="tpt_id"]');
+                const rolesIdCommercialField = overlay.querySelector('mat-select[formcontrolname="roles_id_commercial"]');
+
+                if (tptIdField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Etat']) {
+                    if (jsonData['2. Informations Générales']['Etat'] === 'En vente') {
+                        console.log('Processing transaction type dropdown...');
+                        selectDropdownOptionSequentially(tptIdField, 'En vente', 'tpt_id');
+                    }
+                }
+
+                if (rolesIdCommercialField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Commercial']) {
+                    const commercialName = jsonData['2. Informations Générales']['Commercial'];
+                    console.log(`Processing commercial dropdown for: ${commercialName}`);
+
+                    setTimeout(() => {
+                        selectDropdownOptionSequentially(rolesIdCommercialField, commercialName, 'roles_id_commercial');
+                    }, 1000);
                 }
             });
-        });
-        
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // Start monitoring when the page loads
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', startFormMonitoring);
-    } else {
-        startFormMonitoring();
-    }
-
-    // Load data from localStorage
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            jsonData = JSON.parse(stored);
+        } catch (error) {
+            console.error('Error in sequential dropdown processing:', error);
+        } finally {
+            setTimeout(() => {
+                isProcessingDropdowns = false;
+                console.log('Dropdown processing completed');
+            }, 3000);
         }
-    } catch (e) {
-        console.error('Failed to load stored data:', e);
     }
 
-    // Create title section
-    const titleSection = document.createElement('div');
-    titleSection.className = 'elch-title';
-    titleSection.style.position = 'relative';
-    titleSection.style.display = 'flex';
-    titleSection.style.justifyContent = 'space-between';
-    titleSection.style.alignItems = 'center';
-    
-    const titleContent = document.createElement('div');
-    titleContent.style.display = 'flex';
-    titleContent.style.alignItems = 'center';
-    titleContent.style.gap = '8px';
-    
-    const titleText = document.createElement('span');
-    titleText.textContent = jsonData.title || 'Easy creator';
-    titleContent.appendChild(titleText);
-    
-    // Add Pipedrive icon if URL exists
-    if (jsonData['1. Informations complémentaires']?.['URL du deal Pipedrive']) {
-        const pipedriveLink = document.createElement('a');
-        pipedriveLink.href = jsonData['1. Informations complémentaires']['URL du deal Pipedrive'];
-        pipedriveLink.target = '_blank';
-        
-        const pipedriveIcon = document.createElement('img');
-        pipedriveIcon.src = 'https://nexvia-connect.github.io/easy-scripts/media/pipedrive-favicon.png';
-        pipedriveIcon.className = 'elch-pipedrive-icon';
-        pipedriveIcon.style.width = '16px';
-        pipedriveIcon.style.height = '16px';
-        
-        pipedriveLink.appendChild(pipedriveIcon);
-        titleContent.appendChild(pipedriveLink);
-    }
-    
-    titleSection.appendChild(titleContent);
-    
-    const closeButton = document.createElement('span');
-    closeButton.className = 'material-icons elch-close';
-    closeButton.title = 'Close';
-    closeButton.style.cursor = 'pointer';
-    closeButton.style.position = 'absolute';
-    closeButton.style.right = '0';
-    closeButton.style.top = '50%';
-    closeButton.style.transform = 'translateY(-50%)';
-    closeButton.textContent = 'close';
-    titleSection.appendChild(closeButton);
-    
-    sectionBox.appendChild(titleSection);
+    function selectDropdownOptionSequentially(dropdownField, targetText, dropdownName) {
+        if (!dropdownField) return false;
 
-    // Create sections for each data category
-    if (jsonData && Object.keys(jsonData).length > 0) {
-        Object.entries(jsonData).forEach(([key, value]) => {
-            if (key === 'title') return;
-            
-            const section = document.createElement('details');
-            section.className = 'elch-section';
-            
-            const summary = document.createElement('summary');
-            summary.textContent = key;
-            section.appendChild(summary);
-            
-            if (typeof value === 'object' && value !== null) {
-                Object.entries(value).forEach(([subKey, subValue]) => {
-                    const entry = document.createElement('div');
-                    entry.className = 'elch-entry';
-                    entry.style.flexDirection = 'column';
-                    
-                    const label = document.createElement('div');
-                    label.className = 'elch-label';
-                    label.textContent = subKey;
-                    entry.appendChild(label);
-                    
-                    if (typeof subValue === 'string' && subValue.startsWith('http')) {
-                        // URL field
-                        const urlContainer = document.createElement('div');
-                        urlContainer.style.display = 'flex';
-                        urlContainer.style.gap = '8px';
-                        urlContainer.style.alignItems = 'center';
-                        
-                        const urlInput = document.createElement('input');
-                        urlInput.type = 'text';
-                        urlInput.value = subValue;
-                        urlInput.readOnly = true;
-                        urlInput.style.flex = '1';
-                        urlContainer.appendChild(urlInput);
-                        
-                        const copyButton = document.createElement('button');
-                        copyButton.className = 'copy';
-                        copyButton.textContent = 'Copy';
-                        copyButton.addEventListener('click', () => {
-                            GM_setClipboard(subValue);
-                            copyButton.textContent = 'Copied!';
-                            setTimeout(() => {
-                                copyButton.textContent = 'Copy';
-                            }, 2000);
-                        });
-                        urlContainer.appendChild(copyButton);
-                        
-                        const openButton = document.createElement('button');
-                        openButton.className = 'open-link';
-                        openButton.textContent = 'Open';
-                        openButton.addEventListener('click', () => {
-                            window.open(subValue, '_blank');
-                        });
-                        urlContainer.appendChild(openButton);
-                        
-                        entry.appendChild(urlContainer);
-                    } else if (subKey === 'Download description' && typeof subValue === 'string' && subValue.startsWith('http')) {
-                        // Special handling for description download
-                        const descContainer = document.createElement('div');
-                        descContainer.style.display = 'flex';
-                        descContainer.style.gap = '8px';
-                        descContainer.style.alignItems = 'center';
-                        
-                        const descInput = document.createElement('input');
-                        descInput.type = 'text';
-                        descInput.value = subValue;
-                        descInput.readOnly = true;
-                        descInput.style.flex = '1';
-                        descContainer.appendChild(descInput);
-                        
-                        const copyButton = document.createElement('button');
-                        copyButton.className = 'copy';
-                        copyButton.textContent = 'Copy';
-                        copyButton.addEventListener('click', () => {
-                            GM_setClipboard(subValue);
-                            copyButton.textContent = 'Copied!';
-                            setTimeout(() => {
-                                copyButton.textContent = 'Copy';
-                            }, 2000);
-                        });
-                        descContainer.appendChild(copyButton);
-                        
-                        const fetchButton = document.createElement('button');
-                        fetchButton.textContent = 'Fetch Text';
-                        fetchButton.addEventListener('click', async () => {
-                            try {
-                                const response = await fetch(subValue);
-                                const text = await response.text();
-                                GM_setClipboard(text);
-                                fetchButton.textContent = 'Copied!';
-                                setTimeout(() => {
-                                    fetchButton.textContent = 'Fetch Text';
-                                }, 2000);
-                            } catch (error) {
-                                fetchButton.textContent = 'Error';
-                                setTimeout(() => {
-                                    fetchButton.textContent = 'Fetch Text';
-                                }, 2000);
+        console.log(`Sequentially selecting dropdown option: ${targetText} for ${dropdownName}`);
+
+        const normalizedTargetText = targetText.toLowerCase().trim();
+
+        try {
+            const angularComponent = dropdownField.closest('[ng-version]') || dropdownField;
+
+            if (angularComponent._ngModel) {
+                angularComponent._ngModel.setValue(targetText);
+                console.log(`Set value via _ngModel for ${dropdownName}`);
+                filledDropdowns.add(dropdownName);
+                return true;
+            }
+
+            if (angularComponent.ngModel) {
+                angularComponent.ngModel.$setViewValue(targetText);
+                console.log(`Set value via ngModel for ${dropdownName}`);
+                filledDropdowns.add(dropdownName);
+                return true;
+            }
+
+            const formControl = angularComponent.getAttribute('formcontrolname');
+            if (formControl) {
+                const formComponent = angularComponent.closest('form') || angularComponent.closest('[formgroup]');
+                if (formComponent && formComponent.componentInstance) {
+                    const control = formComponent.componentInstance.form?.get(formControl);
+                    if (control) {
+                        control.setValue(targetText);
+                        console.log(`Set value via form control for ${dropdownName}`);
+                        filledDropdowns.add(dropdownName);
+                        return true;
+                    }
+                }
+            }
+        } catch (error) {
+            console.log(`Direct value setting failed for ${dropdownName}:`, error);
+        }
+
+        try {
+            dropdownField.click();
+
+            setTimeout(() => {
+                const dropdownOverlays = document.querySelectorAll('.cdk-overlay-pane');
+
+                dropdownOverlays.forEach(overlay => {
+                    const options = overlay.querySelectorAll('mat-option');
+
+                    if (options.length > 0) {
+                        console.log(`Found ${options.length} dropdown options for ${targetText}`);
+
+                        let found = false;
+
+                        options.forEach(option => {
+                            const optionText = option.querySelector('.mat-option-text')?.textContent?.trim();
+                            const normalizedOptionText = optionText?.toLowerCase();
+
+                            console.log(`Checking option: "${optionText}" (normalized: "${normalizedOptionText}") against "${targetText}" (normalized: "${normalizedTargetText}")`);
+
+                            if (normalizedOptionText === normalizedTargetText) {
+                                console.log(`Found case-insensitive match: ${optionText} matches ${targetText}`);
+
+                                option.click();
+                                option.dispatchEvent(new Event('click', { bubbles: true }));
+
+                                if (option._ngModel) {
+                                    option._ngModel.setValue(optionText);
+                                }
+
+                                found = true;
+                                console.log(`Selected dropdown option: ${optionText} for ${dropdownName}`);
+
+                                filledDropdowns.add(dropdownName);
                             }
                         });
-                        descContainer.appendChild(fetchButton);
-                        
-                        entry.appendChild(descContainer);
-                    } else {
-                        // Regular text field
-                        const textContainer = document.createElement('div');
-                        textContainer.style.display = 'flex';
-                        textContainer.style.gap = '8px';
-                        textContainer.style.alignItems = 'center';
-                        
-                        const textInput = document.createElement('input');
-                        textInput.type = 'text';
-                        textInput.value = subValue;
-                        textInput.readOnly = true;
-                        textInput.style.flex = '1';
-                        textContainer.appendChild(textInput);
-                        
-                        const copyButton = document.createElement('button');
-                        copyButton.className = 'copy';
-                        copyButton.textContent = 'Copy';
-                        copyButton.addEventListener('click', () => {
-                            GM_setClipboard(subValue);
-                            copyButton.textContent = 'Copied!';
-                            setTimeout(() => {
-                                copyButton.textContent = 'Copy';
-                            }, 2000);
-                        });
-                        textContainer.appendChild(copyButton);
-                        
-                        entry.appendChild(textContainer);
+
+                        if (!found && normalizedTargetText !== '- sélectionnez -') {
+                            options.forEach(option => {
+                                const optionText = option.querySelector('.mat-option-text')?.textContent?.trim();
+                                const normalizedOptionText = optionText?.toLowerCase();
+
+                                if (normalizedOptionText === '- sélectionnez -') {
+                                    option.click();
+                                    option.dispatchEvent(new Event('click', { bubbles: true }));
+                                    console.log(`Selected fallback option: - Sélectionnez - for ${dropdownName}`);
+
+                                    filledDropdowns.add(dropdownName);
+                                }
+                            });
+                        }
                     }
-                    
-                    section.appendChild(entry);
                 });
-            }
-            
-            sectionBox.appendChild(section);
-        });
-    } else {
-        // Create default import section when no data
-        const importSection = document.createElement('details');
-        importSection.className = 'elch-section';
-        importSection.open = true;
-        
-        const summary = document.createElement('summary');
-        summary.textContent = '0. Import code';
-        importSection.appendChild(summary);
-        
-        const entry = document.createElement('div');
-        entry.className = 'elch-entry';
-        entry.style.flexDirection = 'column';
-        
-        const textarea = document.createElement('textarea');
-        textarea.id = 'elch-inline-input';
-        textarea.placeholder = 'Paste your JSON data here...';
-        textarea.style.width = '100%';
-        textarea.style.minHeight = '100px';
-        textarea.style.resize = 'vertical';
-        textarea.style.fontFamily = 'monospace';
-        textarea.style.fontSize = '12px';
-        textarea.style.padding = '8px';
-        textarea.style.border = '1px solid #ccc';
-        textarea.style.borderRadius = '4px';
-        
-        textarea.addEventListener('input', () => {
-            try {
-                const parsed = JSON.parse(textarea.value);
-                jsonData = parsed;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-                localStorage.setItem(LAST_USED_KEY, Date.now());
-                
-                // Reload the UI with new data
-                location.reload();
-            } catch (e) {
-                // Invalid JSON, ignore
-            }
-        });
-        
-        entry.appendChild(textarea);
-        importSection.appendChild(entry);
-        sectionBox.appendChild(importSection);
+            }, 300);
+        } catch (error) {
+            console.log(`Dropdown interaction failed for ${dropdownName}:`, error);
+        }
+
+        return true;
     }
 
-    // Drag functionality
-    let isDragging = false;
-    let startX, startY, startLeft, startTop;
+    function fillAllFormFields() {
+        if (!jsonData) return;
 
-    wrapper.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.copy') || e.target.closest('.open-link') || e.target.closest('.elch-close') || e.target.closest('textarea')) {
+        console.log('Filling all form fields (excluding dropdowns)...');
+
+        const overlays = document.querySelectorAll('.cdk-overlay-pane');
+
+        overlays.forEach(overlay => {
+            const streetNumberField = overlay.querySelector('input[formcontrolname="street_number"]');
+            const routeField = overlay.querySelector('input[formcontrolname="route"]');
+            const postalCodeField = overlay.querySelector('input[formcontrolname="postal_code"]');
+            const localityField = overlay.querySelector('input[formcontrolname="locality"]');
+
+            const surfaceField = overlay.querySelector('input[formcontrolname="surface"]');
+            const etageField = overlay.querySelector('input[formcontrolname="etage"]');
+            const budgetField = overlay.querySelector('input[formcontrolname="budget"]');
+            const nbChambresField = overlay.querySelector('input[formcontrolname="nb_chambres"]');
+            const nbSdbField = overlay.querySelector('input[formcontrolname="nb_sdb"]');
+            const nbEtagesField = overlay.querySelector('input[formcontrolname="nb_etages"]');
+
+            if (jsonData['3. Coordonnées'] && jsonData['3. Coordonnées']['Adresse']) {
+                const addressData = parseAddress(jsonData['3. Coordonnées']['Adresse']);
+                if (addressData) {
+                    if (streetNumberField) fillAngularField(streetNumberField, addressData.propertyNumber, 'street_number');
+                    if (routeField) fillAngularField(routeField, addressData.streetName, 'route');
+                    if (postalCodeField) fillAngularField(postalCodeField, addressData.postCode, 'postal_code');
+                    if (localityField) fillAngularField(localityField, addressData.city, 'locality');
+                }
+            }
+
+            if (surfaceField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Surface au sol']) {
+                const surfaceValue = jsonData['2. Informations Générales']['Surface au sol'].replace(' sqm', '');
+                fillAngularField(surfaceField, surfaceValue, 'surface');
+            }
+
+            if (etageField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Etage']) {
+                fillAngularField(etageField, jsonData['2. Informations Générales']['Etage'], 'etage');
+            }
+
+            if (budgetField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Prix de Vente']) {
+                fillAngularField(budgetField, jsonData['2. Informations Générales']['Prix de Vente'], 'budget');
+            }
+
+            if (nbChambresField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Chambres']) {
+                fillAngularField(nbChambresField, jsonData['2. Informations Générales']['Chambres'], 'nb_chambres');
+            }
+
+            if (nbSdbField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Salles de bain']) {
+                fillAngularField(nbSdbField, jsonData['2. Informations Générales']['Salles de bain'], 'nb_sdb');
+            }
+
+            if (nbEtagesField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Nb étages']) {
+                fillAngularField(nbEtagesField, jsonData['2. Informations Générales']['Nb étages'], 'nb_etages');
+            }
+        });
+
+        setTimeout(() => {
+            processDropdownsSequentially();
+        }, 500);
+    }
+
+    let fillFormFieldsTimeout = null;
+    let lastFillAttempt = 0;
+
+    function fillFormFields() {
+        if (fillFormFieldsTimeout) {
+            clearTimeout(fillFormFieldsTimeout);
+        }
+
+        const now = Date.now();
+        if (now - lastFillAttempt < 1500) {
             return;
         }
-        
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        startLeft = parseInt(wrapper.style.left) || 0;
-        startTop = parseInt(wrapper.style.top) || 0;
-        
-        wrapper.style.cursor = 'grabbing';
-    });
 
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
-        
-        wrapper.style.left = (startLeft + deltaX) + 'px';
-        wrapper.style.top = (startTop + deltaY) + 'px';
-    });
+        fillFormFieldsTimeout = setTimeout(() => {
+            fillAllFormFields();
+            lastFillAttempt = now;
+        }, 300);
+    }
 
-    document.addEventListener('mouseup', () => {
-        if (isDragging) {
-            isDragging = false;
-            wrapper.style.cursor = 'move';
+    const observer = new MutationObserver((mutations) => {
+        let shouldCheck = false;
+
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.classList && node.classList.contains('cdk-overlay-pane')) {
+                            shouldCheck = true;
+                        }
+
+                        if (node.querySelector && node.querySelector('input[formcontrolname]')) {
+                            shouldCheck = true;
+                        }
+                    }
+                });
+            }
+        });
+
+        if (shouldCheck) {
+            setTimeout(() => {
+                fillFormFields();
+            }, 200);
         }
     });
 
-    // Initialize position
-    wrapper.style.left = '50px';
-    wrapper.style.top = '50px';
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    let periodicCheckInterval = null;
+
+    function startPeriodicCheck() {
+        if (periodicCheckInterval) return;
+
+        periodicCheckInterval = setInterval(() => {
+            if (document.querySelector('.cdk-overlay-pane')) {
+                fillFormFields();
+            }
+        }, 3000);
+    }
+
+    function stopPeriodicCheck() {
+        if (periodicCheckInterval) {
+            clearInterval(periodicCheckInterval);
+            periodicCheckInterval = null;
+        }
+    }
+
+    startPeriodicCheck();
+
+    function showSections() {
+        sectionBox.innerHTML = '';
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'elch-title';
+        titleDiv.style.position = 'relative';
+        titleDiv.style.display = 'flex';
+        titleDiv.style.justifyContent = 'space-between';
+        titleDiv.style.alignItems = 'center';
+
+        const titleContainer = document.createElement('div');
+        titleContainer.style.display = 'flex';
+        titleContainer.style.alignItems = 'center';
+        titleContainer.style.gap = '8px';
+
+        const titleText = document.createElement('span');
+        titleText.textContent = jsonData.title || 'Easy creator';
+
+        let pipedriveUrl = null;
+        for (const section in jsonData) {
+            if (jsonData[section] && typeof jsonData[section] === 'object') {
+                if (jsonData[section]['URL du deal Pipedrive']) {
+                    pipedriveUrl = jsonData[section]['URL du deal Pipedrive'];
+                    break;
+                }
+            }
+        }
+
+        if (pipedriveUrl) {
+            const pipeLink = document.createElement('a');
+            pipeLink.href = pipedriveUrl;
+            pipeLink.target = '_blank';
+            pipeLink.innerHTML = `<img src="https://nexvia-connect.github.io/easy-scripts/media/pipedrive-favicon.png" class="elch-pipedrive-icon" />`;
+            titleContainer.appendChild(pipeLink);
+        }
+
+        const closeButton = document.createElement('span');
+        closeButton.className = 'material-icons elch-close';
+        closeButton.textContent = 'close';
+        closeButton.title = 'Close';
+        closeButton.style.cursor = 'pointer';
+        closeButton.onclick = (e) => {
+            e.stopPropagation();
+            collapseUI();
+        };
+
+        titleContainer.appendChild(titleText);
+        titleDiv.appendChild(titleContainer);
+        titleDiv.appendChild(closeButton);
+        sectionBox.appendChild(titleDiv);
+
+        const importSection = document.createElement('details');
+        importSection.className = 'elch-section';
+        importSection.setAttribute('open', '');
+        importSection.innerHTML = `
+            <summary>0. Import code</summary>
+            <div class="elch-entry" style="flex-direction: column;">
+                <textarea id="elch-inline-input">${Object.keys(jsonData).length > 0 ? JSON.stringify(jsonData, null, 2) : ''}</textarea><br>
+                <button id="elch-inline-save">Load</button>
+                <button id="elch-inline-reset">Reset</button>
+            </div>`;
+        sectionBox.appendChild(importSection);
+
+        document.getElementById('elch-inline-save').onclick = () => {
+            try {
+                const txt = document.getElementById('elch-inline-input').value;
+                jsonData = JSON.parse(txt);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(jsonData));
+                localStorage.setItem(LAST_USED_KEY, Date.now());
+
+                filledFields.clear();
+                filledDropdowns.clear();
+
+                showSections();
+            } catch {
+                alert('Invalid JSON');
+            }
+        };
+
+        document.getElementById('elch-inline-reset').onclick = () => {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(LAST_USED_KEY);
+            jsonData = {};
+
+            filledFields.clear();
+            filledDropdowns.clear();
+
+            showSections();
+        };
+
+        if (!jsonData || Object.keys(jsonData).length === 0) return;
+
+        for (const section in jsonData) {
+            if (section === 'title') continue;
+            const details = document.createElement('details');
+            details.className = 'elch-section';
+            const summary = document.createElement('summary');
+            summary.textContent = section;
+            details.appendChild(summary);
+
+            const entries = jsonData[section];
+            for (const key in entries) {
+                const row = renderRow(key, String(entries[key]));
+                details.appendChild(row);
+            }
+
+            const summaryEl = details.querySelector('summary');
+            summaryEl.addEventListener('click', () => {
+                document.querySelectorAll('.elch-section').forEach(other => {
+                    if (other !== details) other.removeAttribute('open');
+                });
+
+                recalculateHeight();
+            });
+
+            sectionBox.appendChild(details);
+        }
+
+        recalculateHeight();
+    }
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const lastUsed = parseInt(localStorage.getItem(LAST_USED_KEY), 10);
+    const now = Date.now();
+    if (!jsonData || Object.keys(jsonData).length === 0) {
+        if (saved && (!lastUsed || now - lastUsed <= 3600000)) {
+            try {
+                jsonData = JSON.parse(saved);
+                localStorage.setItem(LAST_USED_KEY, now);
+            } catch {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(LAST_USED_KEY);
+            }
+        }
+    }
+
+    showSections();
 })();
