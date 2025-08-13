@@ -575,6 +575,11 @@
                         if (node.querySelector && node.querySelector('input[formcontrolname]')) {
                             shouldCheck = true;
                         }
+
+                        // Check if any text content was added that might contain the reference
+                        if (node.textContent && node.textContent.includes('Réf.')) {
+                            shouldCheck = true;
+                        }
                     }
                 });
             }
@@ -583,6 +588,10 @@
         if (shouldCheck) {
             setTimeout(() => {
                 fillFormFields();
+                // Also update the listing reference when page content changes
+                if (window.updateListingReference) {
+                    window.updateListingReference();
+                }
             }, 200);
         }
     });
@@ -600,6 +609,10 @@
         periodicCheckInterval = setInterval(() => {
             if (document.querySelector('.cdk-overlay-pane')) {
                 fillFormFields();
+            }
+            // Also periodically check for listing reference updates
+            if (window.updateListingReference) {
+                window.updateListingReference();
             }
         }, 3000);
     }
@@ -730,6 +743,72 @@
 
             sectionBox.appendChild(details);
         }
+
+        // Add "View listing" section at the end
+        const viewListingSection = document.createElement('details');
+        viewListingSection.className = 'elch-section';
+        const viewListingSummary = document.createElement('summary');
+        viewListingSummary.textContent = 'View listing';
+        viewListingSection.appendChild(viewListingSummary);
+
+        // Create a function to update the listing reference
+        function updateListingReference() {
+            let listingRef = '';
+
+            // Look specifically for the div that contains "Réf." text
+            const allDivs = document.querySelectorAll('div[_ngcontent-c23]');
+            for (const div of allDivs) {
+                if (div.textContent.includes('Réf.')) {
+                    // Find the strong element that comes immediately after "Réf." text
+                    const strongElement = div.querySelector('strong[_ngcontent-c23]');
+                    if (strongElement) {
+                        // Get the text content and clean it up
+                        const refText = strongElement.textContent.trim();
+                        // Extract only the numbers from the reference
+                        const refMatch = refText.match(/^\d+$/);
+                        if (refMatch) {
+                            listingRef = refMatch[0];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Clear existing content
+            const existingRow = viewListingSection.querySelector('.elch-entry');
+            if (existingRow) {
+                existingRow.remove();
+            }
+
+            if (listingRef) {
+                const listingUrl = `https://www.nexvia.lu/buy/detail/${listingRef}`;
+                const listingRow = document.createElement('div');
+                listingRow.className = 'elch-entry';
+                listingRow.innerHTML = `
+                    <div>Nexvia listing</div>
+                    <div><a href="${listingUrl}" target="_blank"><button class="elch-download">Open</button></a></div>
+                `;
+                viewListingSection.appendChild(listingRow);
+            } else {
+                const noRefRow = document.createElement('div');
+                noRefRow.className = 'elch-entry';
+                noRefRow.innerHTML = `
+                    <div>Nexvia listing</div>
+                    <div><span style="color: #999;">Reference not found</span></div>
+                `;
+                viewListingSection.appendChild(noRefRow);
+            }
+
+            recalculateHeight();
+        }
+
+        // Initial update
+        updateListingReference();
+
+        // Store the update function globally so it can be called from the observer
+        window.updateListingReference = updateListingReference;
+
+        sectionBox.appendChild(viewListingSection);
 
         recalculateHeight();
     }
