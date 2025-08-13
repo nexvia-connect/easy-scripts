@@ -286,6 +286,118 @@
         return row;
     }
 
+    // NEW: Address parsing function
+    function parseAddress(address) {
+        if (!address) return null;
+        
+        // Match: number (optional letter) + street + L-postcode + city
+        const regex = /^(\d+[A-Za-z]*)\s+(.+?)\s+(L-\d{4})\s+(.+)$/;
+        const match = address.match(regex);
+        
+        if (match) {
+            return {
+                propertyNumber: match[1],
+                streetName: match[2],
+                postCode: match[3],
+                city: match[4]
+            };
+        }
+        return null;
+    }
+
+    // NEW: Angular-aware field filling function
+    function fillAngularField(field, value) {
+        // Method 1: Set value and trigger Angular events
+        field.value = value;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Method 2: Try to access Angular's form control directly
+        if (field._ngModel) {
+            field._ngModel.setValue(value);
+        }
+        
+        // Method 3: Try to find the Angular component and set value
+        const angularElement = field.closest('[ng-version]') || field.closest('[ng-model]') || field;
+        if (angularElement && angularElement.ngModel) {
+            angularElement.ngModel.$setViewValue(value);
+        }
+        
+        // Method 4: Force focus and blur to trigger Angular validation
+        field.focus();
+        field.blur();
+    }
+
+    // NEW: Address auto-fill function
+    function fillAddressFields() {
+        if (!jsonData['3. Coordonnées'] || !jsonData['3. Coordonnées']['Adresse']) {
+            return;
+        }
+
+        const addressData = parseAddress(jsonData['3. Coordonnées']['Adresse']);
+        if (!addressData) return;
+
+        // Look for Angular Material form fields in CDK overlays
+        const overlays = document.querySelectorAll('.cdk-overlay-pane');
+        
+        overlays.forEach(overlay => {
+            // Find the form fields within this overlay
+            const streetNumberField = overlay.querySelector('input[formcontrolname="street_number"]');
+            const routeField = overlay.querySelector('input[formcontrolname="route"]');
+            const postalCodeField = overlay.querySelector('input[formcontrolname="postal_code"]');
+            const localityField = overlay.querySelector('input[formcontrolname="locality"]');
+
+            if (streetNumberField && routeField && postalCodeField && localityField) {
+                // Fill the fields using Angular's proper method
+                fillAngularField(streetNumberField, addressData.propertyNumber);
+                fillAngularField(routeField, addressData.streetName);
+                fillAngularField(postalCodeField, addressData.postCode);
+                fillAngularField(localityField, addressData.city);
+                
+                console.log('Address fields filled:', addressData);
+            }
+        });
+    }
+
+    // NEW: Monitor for new popups/dialogs
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if this is a new CDK overlay
+                        if (node.classList && node.classList.contains('cdk-overlay-pane')) {
+                            // Wait a bit for Angular to fully render the form
+                            setTimeout(() => {
+                                fillAddressFields();
+                            }, 100);
+                        }
+                        
+                        // Also check if any new form fields were added
+                        if (node.querySelector && node.querySelector('input[formcontrolname]')) {
+                            setTimeout(() => {
+                                fillAddressFields();
+                            }, 100);
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    // Start observing
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Also try to fill fields periodically as a fallback
+    setInterval(() => {
+        if (document.querySelector('.cdk-overlay-pane')) {
+            fillAddressFields();
+        }
+    }, 1000);
+
     function showSections() {
         sectionBox.innerHTML = '';
 
