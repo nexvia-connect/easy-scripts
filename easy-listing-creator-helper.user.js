@@ -47,13 +47,13 @@
     document.head.appendChild(iconLink);
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'elch-wrapper right';
+    wrapper.className = 'elch-wrapper left';
     wrapper.style.position = 'fixed';
     wrapper.style.zIndex = '9999';
     wrapper.style.cursor = 'move';
     wrapper.style.height = 'auto';
     wrapper.style.maxHeight = '80vh';
-    wrapper.style.overflowY = 'auto';
+    wrapper.style.overflowY = 'hidden';
     wrapper.style.overflowX = 'hidden';
     document.body.appendChild(wrapper);
 
