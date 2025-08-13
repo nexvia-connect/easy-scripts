@@ -14,6 +14,11 @@
     const LAST_USED_KEY = 'easy_listing_last_used';
     let jsonData = {};
     let redirectedViaHash = false;
+    let isProcessingDropdowns = false; // NEW: Flag to prevent multiple dropdown processing
+    
+    // NEW: Track filled fields to avoid refilling - but only mark as filled when actually successful
+    let filledFields = new Set();
+    let filledDropdowns = new Set();
 
     if (location.hash.includes('data=')) {
         try {
@@ -202,9 +207,6 @@
     // Add drag event listeners
     wrapper.addEventListener('mousedown', startDrag);
 
-    // Remove the old drag prevention logic since it's now handled in startDrag
-    // wrapper.addEventListener('mousedown', (e) => { ... });
-
     function extractMarkdownLink(str) {
         const match = str.match(/\[([^\]]+)]\(([^)]+)\)/);
         return match ? { label: match[1], url: match[2] } : null;
@@ -305,8 +307,21 @@
         return null;
     }
 
-    // NEW: Angular-aware field filling function
-    function fillAngularField(field, value) {
+    // NEW: Angular-aware field filling function with smarter tracking
+    function fillAngularField(field, value, fieldName) {
+        // Check if this field has already been filled AND the value is still there
+        if (filledFields.has(fieldName)) {
+            // Double-check if the field actually has the value
+            if (field.value === value || field.value === value.toString()) {
+                console.log(`Field ${fieldName} already filled with correct value, skipping`);
+                return false;
+            } else {
+                // Value changed, remove from filled set and refill
+                console.log(`Field ${fieldName} value changed, refilling`);
+                filledFields.delete(fieldName);
+            }
+        }
+        
         // Method 1: Set value and trigger Angular events
         field.value = value;
         field.dispatchEvent(new Event('input', { bubbles: true }));
@@ -326,63 +341,311 @@
         // Method 4: Force focus and blur to trigger Angular validation
         field.focus();
         field.blur();
+        
+        // Verify the value was actually set before marking as filled
+        setTimeout(() => {
+            if (field.value === value || field.value === value.toString()) {
+                filledFields.add(fieldName);
+                console.log(`Field ${fieldName} successfully filled with value: ${value}`);
+            } else {
+                console.log(`Field ${fieldName} fill verification failed, will retry`);
+            }
+        }, 100);
+        
+        return true;
     }
 
-    // NEW: Address auto-fill function
-    function fillAddressFields() {
-        if (!jsonData['3. Coordonnées'] || !jsonData['3. Coordonnées']['Adresse']) {
-            return;
+    // NEW: Sequential dropdown processing function with smarter tracking
+    async function processDropdownsSequentially() {
+        if (isProcessingDropdowns) return;
+        
+        isProcessingDropdowns = true;
+        console.log('Starting sequential dropdown processing...');
+        
+        try {
+            // Look for Angular Material form fields in CDK overlays
+            const overlays = document.querySelectorAll('.cdk-overlay-pane');
+            
+            overlays.forEach(overlay => {
+                // Find dropdown fields
+                const tptIdField = overlay.querySelector('mat-select[formcontrolname="tpt_id"]');
+                const rolesIdCommercialField = overlay.querySelector('mat-select[formcontrolname="roles_id_commercial"]');
+                
+                // Process transaction type dropdown first
+                if (tptIdField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Etat']) {
+                    if (jsonData['2. Informations Générales']['Etat'] === 'En vente') {
+                        console.log('Processing transaction type dropdown...');
+                        selectDropdownOptionSequentially(tptIdField, 'En vente', 'tpt_id');
+                    }
+                }
+                
+                // Process commercial dropdown second (with delay)
+                if (rolesIdCommercialField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Commercial']) {
+                    const commercialName = jsonData['2. Informations Générales']['Commercial'];
+                    console.log(`Processing commercial dropdown for: ${commercialName}`);
+                    
+                    // Delay the second dropdown to avoid conflicts
+                    setTimeout(() => {
+                        selectDropdownOptionSequentially(rolesIdCommercialField, commercialName, 'roles_id_commercial');
+                    }, 1000); // 1 second delay between dropdowns
+                }
+            });
+        } catch (error) {
+            console.error('Error in sequential dropdown processing:', error);
+        } finally {
+            // Reset the flag after a delay to allow for future processing
+            setTimeout(() => {
+                isProcessingDropdowns = false;
+                console.log('Dropdown processing completed');
+            }, 3000);
         }
+    }
 
-        const addressData = parseAddress(jsonData['3. Coordonnées']['Adresse']);
-        if (!addressData) return;
+    // NEW: Enhanced dropdown selection function with case-insensitive matching and smarter tracking
+    function selectDropdownOptionSequentially(dropdownField, targetText, dropdownName) {
+        if (!dropdownField) return false;
+        
+        console.log(`Sequentially selecting dropdown option: ${targetText} for ${dropdownName}`);
+        
+        // Normalize target text to lowercase for comparison
+        const normalizedTargetText = targetText.toLowerCase().trim();
+        
+        // Method 1: Try to set the value directly on the Angular component first
+        try {
+            // Access the Angular component
+            const angularComponent = dropdownField.closest('[ng-version]') || dropdownField;
+            
+            // Try multiple ways to set the value
+            if (angularComponent._ngModel) {
+                angularComponent._ngModel.setValue(targetText);
+                console.log(`Set value via _ngModel for ${dropdownName}`);
+                filledDropdowns.add(dropdownName);
+                return true;
+            }
+            
+            if (angularComponent.ngModel) {
+                angularComponent.ngModel.$setViewValue(targetText);
+                console.log(`Set value via ngModel for ${dropdownName}`);
+                filledDropdowns.add(dropdownName);
+                return true;
+            }
+            
+            // Try to find the form control
+            const formControl = angularComponent.getAttribute('formcontrolname');
+            if (formControl) {
+                // Look for the parent form component
+                const formComponent = angularComponent.closest('form') || angularComponent.closest('[formgroup]');
+                if (formComponent && formComponent.componentInstance) {
+                    const control = formComponent.componentInstance.form?.get(formControl);
+                    if (control) {
+                        control.setValue(targetText);
+                        console.log(`Set value via form control for ${dropdownName}`);
+                        filledDropdowns.add(dropdownName);
+                        return true;
+                    }
+                }
+            }
+        } catch (error) {
+            console.log(`Direct value setting failed for ${dropdownName}:`, error);
+        }
+        
+        // Method 2: If direct setting fails, try the click approach
+        try {
+            // First, click on the dropdown to open it
+            dropdownField.click();
+            
+            // Wait for the dropdown to open, then look for options
+            setTimeout(() => {
+                // Look for the dropdown panel overlay
+                const dropdownOverlays = document.querySelectorAll('.cdk-overlay-pane');
+                
+                dropdownOverlays.forEach(overlay => {
+                    // Check if this overlay contains mat-options (dropdown options)
+                    const options = overlay.querySelectorAll('mat-option');
+                    
+                    if (options.length > 0) {
+                        console.log(`Found ${options.length} dropdown options for ${targetText}`);
+                        
+                        let found = false;
+                        
+                        // First try to find the exact match (case-insensitive)
+                        options.forEach(option => {
+                            const optionText = option.querySelector('.mat-option-text')?.textContent?.trim();
+                            const normalizedOptionText = optionText?.toLowerCase();
+                            
+                            console.log(`Checking option: "${optionText}" (normalized: "${normalizedOptionText}") against "${targetText}" (normalized: "${normalizedTargetText}")`);
+                            
+                            if (normalizedOptionText === normalizedTargetText) {
+                                console.log(`Found case-insensitive match: ${optionText} matches ${targetText}`);
+                                
+                                // Try multiple click methods
+                                option.click();
+                                
+                                // Also try to trigger the selection event
+                                option.dispatchEvent(new Event('click', { bubbles: true }));
+                                
+                                // Try to access the Angular component of the option
+                                if (option._ngModel) {
+                                    option._ngModel.setValue(optionText); // Use the original option text, not the target text
+                                }
+                                
+                                found = true;
+                                console.log(`Selected dropdown option: ${optionText} for ${dropdownName}`);
+                                
+                                // Mark as filled
+                                filledDropdowns.add(dropdownName);
+                            }
+                        });
+                        
+                        // If not found, try to find "- Sélectionnez -" as fallback
+                        if (!found && normalizedTargetText !== '- sélectionnez -') {
+                            options.forEach(option => {
+                                const optionText = option.querySelector('.mat-option-text')?.textContent?.trim();
+                                const normalizedOptionText = optionText?.toLowerCase();
+                                
+                                if (normalizedOptionText === '- sélectionnez -') {
+                                    option.click();
+                                    option.dispatchEvent(new Event('click', { bubbles: true }));
+                                    console.log(`Selected fallback option: - Sélectionnez - for ${dropdownName}`);
+                                    
+                                    // Mark as filled even with fallback
+                                    filledDropdowns.add(dropdownName);
+                                }
+                            });
+                        }
+                    }
+                });
+            }, 300); // Increased wait time for dropdown to fully open
+        } catch (error) {
+            console.log(`Dropdown interaction failed for ${dropdownName}:`, error);
+        }
+        
+        return true;
+    }
+
+    // NEW: Enhanced field filling function for all form fields (without dropdowns) with smarter tracking
+    function fillAllFormFields() {
+        if (!jsonData) return;
+
+        console.log('Filling all form fields (excluding dropdowns)...');
 
         // Look for Angular Material form fields in CDK overlays
         const overlays = document.querySelectorAll('.cdk-overlay-pane');
         
         overlays.forEach(overlay => {
-            // Find the form fields within this overlay
+            // Address fields
             const streetNumberField = overlay.querySelector('input[formcontrolname="street_number"]');
             const routeField = overlay.querySelector('input[formcontrolname="route"]');
             const postalCodeField = overlay.querySelector('input[formcontrolname="postal_code"]');
             const localityField = overlay.querySelector('input[formcontrolname="locality"]');
 
-            if (streetNumberField && routeField && postalCodeField && localityField) {
-                // Fill the fields using Angular's proper method
-                fillAngularField(streetNumberField, addressData.propertyNumber);
-                fillAngularField(routeField, addressData.streetName);
-                fillAngularField(postalCodeField, addressData.postCode);
-                fillAngularField(localityField, addressData.city);
-                
-                console.log('Address fields filled:', addressData);
+            // New fields (excluding dropdowns)
+            const surfaceField = overlay.querySelector('input[formcontrolname="surface"]');
+            const etageField = overlay.querySelector('input[formcontrolname="etage"]');
+            const budgetField = overlay.querySelector('input[formcontrolname="budget"]');
+            const nbChambresField = overlay.querySelector('input[formcontrolname="nb_chambres"]');
+            const nbSdbField = overlay.querySelector('input[formcontrolname="nb_sdb"]');
+            const nbEtagesField = overlay.querySelector('input[formcontrolname="nb_etages"]');
+
+            // Fill address fields if we have address data
+            if (jsonData['3. Coordonnées'] && jsonData['3. Coordonnées']['Adresse']) {
+                const addressData = parseAddress(jsonData['3. Coordonnées']['Adresse']);
+                if (addressData) {
+                    if (streetNumberField) fillAngularField(streetNumberField, addressData.propertyNumber, 'street_number');
+                    if (routeField) fillAngularField(routeField, addressData.streetName, 'route');
+                    if (postalCodeField) fillAngularField(postalCodeField, addressData.postCode, 'postal_code');
+                    if (localityField) fillAngularField(localityField, addressData.city, 'locality');
+                }
+            }
+
+            // Fill surface field
+            if (surfaceField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Surface au sol']) {
+                const surfaceValue = jsonData['2. Informations Générales']['Surface au sol'].replace(' sqm', '');
+                fillAngularField(surfaceField, surfaceValue, 'surface');
+            }
+
+            // Fill etage field
+            if (etageField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Etage']) {
+                fillAngularField(etageField, jsonData['2. Informations Générales']['Etage'], 'etage');
+            }
+
+            // Fill budget field
+            if (budgetField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Prix de Vente']) {
+                fillAngularField(budgetField, jsonData['2. Informations Générales']['Prix de Vente'], 'budget');
+            }
+
+            // Fill chambres field
+            if (nbChambresField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Chambres']) {
+                fillAngularField(nbChambresField, jsonData['2. Informations Générales']['Chambres'], 'nb_chambres');
+            }
+
+            // Fill salles de bain field
+            if (nbSdbField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Salles de bain']) {
+                fillAngularField(nbSdbField, jsonData['2. Informations Générales']['Salles de bain'], 'nb_sdb');
+            }
+
+            // Fill nb etages field
+            if (nbEtagesField && jsonData['2. Informations Générales'] && jsonData['2. Informations Générales']['Nb étages']) {
+                fillAngularField(nbEtagesField, jsonData['2. Informations Générales']['Nb étages'], 'nb_etages');
             }
         });
+        
+        // Process dropdowns separately with sequencing
+        setTimeout(() => {
+            processDropdownsSequentially();
+        }, 500);
     }
 
-    // NEW: Monitor for new popups/dialogs
+    // NEW: Address auto-fill function with debouncing (now calls fillAllFormFields)
+    let fillFormFieldsTimeout = null;
+    let lastFillAttempt = 0;
+    
+    function fillFormFields() {
+        // Debounce: only run once every 300ms (increased frequency)
+        if (fillFormFieldsTimeout) {
+            clearTimeout(fillFormFieldsTimeout);
+        }
+        
+        // Rate limit: don't run more than once every 1.5 seconds (increased frequency)
+        const now = Date.now();
+        if (now - lastFillAttempt < 1500) {
+            return;
+        }
+        
+        fillFormFieldsTimeout = setTimeout(() => {
+            fillAllFormFields();
+            lastFillAttempt = now;
+        }, 300);
+    }
+
+    // NEW: Monitor for new popups/dialogs (less aggressive)
     const observer = new MutationObserver((mutations) => {
+        let shouldCheck = false;
+        
         mutations.forEach((mutation) => {
             if (mutation.type === 'childList') {
                 mutation.addedNodes.forEach((node) => {
                     if (node.nodeType === Node.ELEMENT_NODE) {
                         // Check if this is a new CDK overlay
                         if (node.classList && node.classList.contains('cdk-overlay-pane')) {
-                            // Wait a bit for Angular to fully render the form
-                            setTimeout(() => {
-                                fillAddressFields();
-                            }, 100);
+                            shouldCheck = true;
                         }
                         
                         // Also check if any new form fields were added
                         if (node.querySelector && node.querySelector('input[formcontrolname]')) {
-                            setTimeout(() => {
-                                fillAddressFields();
-                            }, 100);
+                            shouldCheck = true;
                         }
                     }
                 });
             }
         });
+        
+        // Only run the fill function if we actually found something new
+        if (shouldCheck) {
+            setTimeout(() => {
+                fillFormFields();
+            }, 200);
+        }
     });
 
     // Start observing
@@ -391,12 +654,29 @@
         subtree: true
     });
 
-    // Also try to fill fields periodically as a fallback
-    setInterval(() => {
-        if (document.querySelector('.cdk-overlay-pane')) {
-            fillAddressFields();
+    // Increased frequency periodic check - every 3 seconds and only when overlays exist
+    let periodicCheckInterval = null;
+    
+    function startPeriodicCheck() {
+        if (periodicCheckInterval) return;
+        
+        periodicCheckInterval = setInterval(() => {
+            // Only run if there are actually overlays present
+            if (document.querySelector('.cdk-overlay-pane')) {
+                fillFormFields();
+            }
+        }, 3000); // Changed from 5000ms to 3000ms
+    }
+    
+    function stopPeriodicCheck() {
+        if (periodicCheckInterval) {
+            clearInterval(periodicCheckInterval);
+            periodicCheckInterval = null;
         }
-    }, 1000);
+    }
+    
+    // Start periodic check when page loads
+    startPeriodicCheck();
 
     function showSections() {
         sectionBox.innerHTML = '';
@@ -470,6 +750,11 @@
                 jsonData = JSON.parse(txt);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(jsonData));
                 localStorage.setItem(LAST_USED_KEY, Date.now());
+                
+                // Reset filled fields when new data is loaded
+                filledFields.clear();
+                filledDropdowns.clear();
+                
                 showSections();
             } catch {
                 alert('Invalid JSON');
@@ -480,6 +765,11 @@
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem(LAST_USED_KEY);
             jsonData = {};
+            
+            // Reset filled fields when data is reset
+            filledFields.clear();
+            filledDropdowns.clear();
+            
             showSections();
         };
 
