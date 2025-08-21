@@ -783,16 +783,14 @@
         function updateListingReference() {
             let listingRef = '';
 
-            // Look specifically for the div that contains "Réf." text
-            const allDivs = document.querySelectorAll('div[_ngcontent-c23]');
+            // Look for any div that contains "Réf." text, regardless of the ngcontent attribute
+            const allDivs = document.querySelectorAll('div');
             for (const div of allDivs) {
                 if (div.textContent.includes('Réf.')) {
-                    // Find the strong element that comes immediately after "Réf." text
-                    const strongElement = div.querySelector('strong[_ngcontent-c23]');
+                    // Find the strong element within this div
+                    const strongElement = div.querySelector('strong');
                     if (strongElement) {
-                        // Get the text content and clean it up
                         const refText = strongElement.textContent.trim();
-                        // Extract only the numbers from the reference
                         const refMatch = refText.match(/^\d+$/);
                         if (refMatch) {
                             listingRef = refMatch[0];
