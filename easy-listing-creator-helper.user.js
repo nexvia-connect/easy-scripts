@@ -738,6 +738,10 @@
                     if (other !== details) other.removeAttribute('open');
                 });
 
+                if (window.updateListingReference) {
+                    window.updateListingReference();
+                }
+
                 recalculateHeight();
             });
 
@@ -781,7 +785,7 @@
             }
 
             if (listingRef) {
-                const listingUrl = `https://www.nexvia.lu/buy/detail/${listingRef}`;
+                const listingUrl = `https://www.nexvia.lu/listing/reload/${listingRef}`;
                 const listingRow = document.createElement('div');
                 listingRow.className = 'elch-entry';
                 listingRow.innerHTML = `
