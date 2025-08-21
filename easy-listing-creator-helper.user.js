@@ -19,6 +19,10 @@
     let filledFields = new Set();
     let filledDropdowns = new Set();
 
+    // Add polling state variables for listing reference
+    let listingRefPollingInterval = null;
+    let isPollingForListingRef = false;
+
     if (location.hash.includes('data=')) {
         try {
             const params = new URLSearchParams(location.hash.split('?')[1]);
@@ -99,6 +103,9 @@
         wrapper.style.height = 'auto';
         wrapper.style.overflowY = 'visible';
         wrapper.style.overflowX = 'visible';
+        
+        // Stop polling when UI is collapsed
+        stopListingRefPolling();
     }
 
     collapsedCircle.addEventListener('click', () => {
@@ -108,8 +115,6 @@
             expandUI();
         }
     });
-
-    // REMOVED: The document click listener that was closing the UI on copy clicks
 
     wrapper.addEventListener('click', (e) => {
         if (e.target.closest('.elch-collapsed-circle')) {
@@ -191,14 +196,11 @@
         return match ? { label: match[1], url: match[2] } : null;
     }
 
-    // NEW: Function to show icon feedback (white flash, then back to blue)
     function showIconFeedback(iconElement) {
-        // Change to white
         iconElement.style.color = 'white';
 
-        // Change back to blue after 2 seconds
         setTimeout(() => {
-            iconElement.style.color = '#2196F3'; // Blue color
+            iconElement.style.color = '#2196F3';
         }, 2000);
     }
 
@@ -242,7 +244,6 @@
         if (type === 'fetchText') {
             html += `<span class="copy fetch-txt material-icons" style="font-size:14px;vertical-align:middle;" data-url="${val}">content_copy</span>`;
         } else if (type === 'copyText' || type === 'text') {
-            // NEW: Apply 9px font size for values >30 characters
             const fontSize = val.length > 40 ? '8px' : val.length > 20 ? '10px' : '14px';
             html += `<span style="font-size:${fontSize};">${val}</span> <span class="copy material-icons" style="font-size:14px;vertical-align:middle;">content_copy</span>`;
         } else if (type === 'markdown') {
@@ -261,7 +262,6 @@
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
                 copyToClipboard(val);
-                // NEW: Show icon feedback
                 showIconFeedback(copyBtn);
             });
         }
@@ -273,7 +273,6 @@
                     const res = await fetch(val);
                     const text = await res.text();
                     copyToClipboard(text);
-                    // NEW: Show icon feedback
                     showIconFeedback(fetchBtn);
                 } catch {
                     alert('Failed to fetch or copy .txt file.');
@@ -576,7 +575,6 @@
                             shouldCheck = true;
                         }
 
-                        // Check if any text content was added that might contain the reference
                         if (node.textContent && node.textContent.includes('Réf.')) {
                             shouldCheck = true;
                         }
@@ -588,7 +586,6 @@
         if (shouldCheck) {
             setTimeout(() => {
                 fillFormFields();
-                // Also update the listing reference when page content changes
                 if (window.updateListingReference) {
                     window.updateListingReference();
                 }
@@ -610,7 +607,6 @@
             if (document.querySelector('.cdk-overlay-pane')) {
                 fillFormFields();
             }
-            // Also periodically check for listing reference updates
             if (window.updateListingReference) {
                 window.updateListingReference();
             }
@@ -625,6 +621,34 @@
     }
 
     startPeriodicCheck();
+
+    // Function to start polling for listing reference
+    function startListingRefPolling(updateFunction) {
+        if (isPollingForListingRef) return;
+        
+        isPollingForListingRef = true;
+        console.log('Starting polling for listing reference...');
+        
+        listingRefPollingInterval = setInterval(() => {
+            if (!wrapper.classList.contains('expanded')) {
+                // Stop polling if UI is collapsed
+                stopListingRefPolling();
+                return;
+            }
+            
+            updateFunction();
+        }, 3000);
+    }
+
+    // Function to stop polling for listing reference
+    function stopListingRefPolling() {
+        if (listingRefPollingInterval) {
+            clearInterval(listingRefPollingInterval);
+            listingRefPollingInterval = null;
+        }
+        isPollingForListingRef = false;
+        console.log('Stopped polling for listing reference');
+    }
 
     function showSections() {
         sectionBox.innerHTML = '';
@@ -785,6 +809,9 @@
             }
 
             if (listingRef) {
+                // Reference found - stop polling
+                stopListingRefPolling();
+                
                 const listingUrl = `https://www.nexvia.lu/listing/reload/${listingRef}`;
                 const listingRow = document.createElement('div');
                 listingRow.className = 'elch-entry';
@@ -794,11 +821,16 @@
                 `;
                 viewListingSection.appendChild(listingRow);
             } else {
+                // Reference not found - start polling if not already polling
+                if (!isPollingForListingRef) {
+                    startListingRefPolling(updateListingReference);
+                }
+                
                 const noRefRow = document.createElement('div');
                 noRefRow.className = 'elch-entry';
                 noRefRow.innerHTML = `
                     <div>Nexvia listing</div>
-                    <div><span style="color: #999;">Reference not found</span></div>
+                    <div><span style="color: #999;">Reference not found</span> <span class="material-icons" style="font-size: 14px; color: #2196F3; animation: spin 2s linear infinite;">refresh</span></div>
                 `;
                 viewListingSection.appendChild(noRefRow);
             }
