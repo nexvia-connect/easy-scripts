@@ -201,7 +201,7 @@
 
         setTimeout(() => {
             iconElement.style.color = '#2196F3';
-        }, 2000);
+        }, 1000);
     }
 
     function copyToClipboard(val) {
