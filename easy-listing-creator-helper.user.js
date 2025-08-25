@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Easy Listing Creator Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.25
+// @version      4.26
 // @description  Floating JSON UI with import/export via URL (#/route?data=base64), collapses only on control clicks, and supports left/right screen alignment with smooth animation
 // @match        https://nexvia1832.easy-serveur53.com/*
 // @grant        GM_setClipboard
@@ -49,6 +49,51 @@
     iconLink.rel = 'stylesheet';
     iconLink.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
     document.head.appendChild(iconLink);
+
+    // Toast CSS
+    (function ensureToastCss(){
+        if (document.getElementById('elch-toast-css')) return;
+        const s = document.createElement('style');
+        s.id = 'elch-toast-css';
+        s.textContent = `
+        .elch-toast{
+            position:absolute; top:-24px; left:50%; transform:translateX(-50%);
+            font-size:11px; line-height:1; padding:4px 6px; border-radius:6px;
+            background:#111; color:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.25);
+            opacity:0; pointer-events:none; transition:opacity 120ms ease, transform 120ms ease;
+            white-space:nowrap; z-index:999999;
+        }
+        .elch-toast.show{ opacity:1; transform:translateX(-50%) translateY(-2px); }
+        @keyframes elch-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        `;
+        document.head.appendChild(s);
+    })();
+
+    // Toast helper
+    function showCopyToast(anchorEl, text = 'Copied!', duration = 1500) {
+        const host = anchorEl.closest('.elch-entry > div:last-child') || anchorEl.parentElement || document.body;
+        const prevPos = getComputedStyle(host).position;
+        if (!prevPos || prevPos === 'static') host.style.position = 'relative';
+
+        let toast = host.querySelector('.elch-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.className = 'elch-toast';
+            host.appendChild(toast);
+        }
+        toast.textContent = text;
+
+        // force reflow for transition restart
+        // eslint-disable-next-line no-unused-expressions
+        toast.offsetHeight;
+        toast.classList.add('show');
+
+        clearTimeout(toast.__t);
+        toast.__t = setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => { if (toast && toast.parentNode) toast.remove(); }, 160);
+        }, duration);
+    }
 
     const wrapper = document.createElement('div');
     wrapper.className = 'elch-wrapper left';
@@ -103,7 +148,7 @@
         wrapper.style.height = 'auto';
         wrapper.style.overflowY = 'visible';
         wrapper.style.overflowX = 'visible';
-        
+
         // Stop polling when UI is collapsed
         stopListingRefPolling();
     }
@@ -196,9 +241,9 @@
         return match ? { label: match[1], url: match[2] } : null;
     }
 
+    // Shorter icon feedback to 1s
     function showIconFeedback(iconElement) {
         iconElement.style.color = 'white';
-
         setTimeout(() => {
             iconElement.style.color = '#2196F3';
         }, 1000);
@@ -263,6 +308,7 @@
             copyBtn.addEventListener('click', () => {
                 copyToClipboard(val);
                 showIconFeedback(copyBtn);
+                showCopyToast(copyBtn, 'Copied!', 1500);
             });
         }
 
@@ -274,6 +320,7 @@
                     const text = await res.text();
                     copyToClipboard(text);
                     showIconFeedback(fetchBtn);
+                    showCopyToast(fetchBtn, 'Copied!', 1500);
                 } catch {
                     alert('Failed to fetch or copy .txt file.');
                 }
@@ -625,17 +672,17 @@
     // Function to start polling for listing reference
     function startListingRefPolling(updateFunction) {
         if (isPollingForListingRef) return;
-        
+
         isPollingForListingRef = true;
         console.log('Starting polling for listing reference...');
-        
+
         listingRefPollingInterval = setInterval(() => {
             if (!wrapper.classList.contains('expanded')) {
                 // Stop polling if UI is collapsed
                 stopListingRefPolling();
                 return;
             }
-            
+
             updateFunction();
         }, 3000);
     }
@@ -809,7 +856,7 @@
             if (listingRef) {
                 // Reference found - stop polling
                 stopListingRefPolling();
-                
+
                 const listingUrl = `https://www.nexvia.lu/listing/reload/${listingRef}`;
                 const listingRow = document.createElement('div');
                 listingRow.className = 'elch-entry';
@@ -823,12 +870,12 @@
                 if (!isPollingForListingRef) {
                     startListingRefPolling(updateListingReference);
                 }
-                
+
                 const noRefRow = document.createElement('div');
                 noRefRow.className = 'elch-entry';
                 noRefRow.innerHTML = `
                     <div>Nexvia listing</div>
-                    <div><span style="color: #999;">Reference not found</span> <span class="material-icons" style="font-size: 14px; color: #2196F3; animation: spin 2s linear infinite;">refresh</span></div>
+                    <div><span style="color: #999;">Reference not found</span> <span class="material-icons" style="font-size: 14px; color: #2196F3; animation: elch-spin 2s linear infinite;">refresh</span></div>
                 `;
                 viewListingSection.appendChild(noRefRow);
             }
