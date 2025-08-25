@@ -241,12 +241,11 @@
         return match ? { label: match[1], url: match[2] } : null;
     }
 
-    // Shorter icon feedback to 1s
     function showIconFeedback(iconElement) {
         iconElement.style.color = 'white';
         setTimeout(() => {
             iconElement.style.color = '#2196F3';
-        }, 1000);
+        }, 1500);
     }
 
     function copyToClipboard(val) {
